@@ -1,8 +1,8 @@
 body {
-    background-color: #1e5631;
-    color: white;
     text-align: center;
     font-family: Arial;
+    background-color: #1e5631;
+    color: white;
 }
 
 button {
@@ -10,4 +10,9 @@ button {
     background: orange;
     border: none;
     cursor: pointer;
+    margin-top: 10px;
+}
+
+img {
+    margin-top: 20px;
 }
