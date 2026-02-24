@@ -1,0 +1,16 @@
+h2 {
+    text-align: center;
+}
+
+form {
+    width: 300px;
+    margin: auto;
+    padding: 20px;
+    background: rgb(255, 255, 255);
+    border-radius: 10px;
+    box-shadow: 0 0 10px #ccc;
+}
+label{
+
+    color: black;
+}
