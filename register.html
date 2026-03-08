@@ -1,24 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Register</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Banana Jungle Escape</title>
+    <!-- Modern Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/register.css">
 </head>
 <body>
-    <h2>Register</h2>
+
+<!-- Dynamic Background Animation Container -->
+<div class="background-animation" id="bg-animation"></div>
+
+<div class="register-container">
+    <div class="icon-container">
+        🌴
+    </div>
+    <h2>Join the Jungle</h2>
+    
     <form id="registerForm" action="register.php" method="POST">
-        <label>Username:</label><br>
-        <input type="text" name="username" required><br><br>
+        <div class="input-group">
+            <input type="text" name="username" id="username" required placeholder=" ">
+            <label for="username">Explorer Name (Username)</label>
+        </div>
 
-        <label>Email:</label><br>
-        <input type="email" name="email" required><br><br>
+        <div class="input-group">
+            <input type="email" name="email" id="email" required placeholder=" ">
+            <label for="email">Email Address</label>
+        </div>
 
-        <label>Password:</label><br>
-        <input type="password" name="password" required><br><br>
+        <div class="input-group">
+            <input type="password" name="password" id="password" required placeholder=" ">
+            <label for="password">Secret Password</label>
+        </div>
 
-        <button type="submit" name="register">Register</button>
+        <button type="submit" name="register" id="registerBtn">Start Expedition</button>
     </form>
+    
+    <p class="login-link">Already an explorer? <a href="login.html">Login Here</a></p>
+</div>
 
-    <script src="js/register.js"></script>
+<script src="js/register.js"></script>
+
 </body>
 </html>
