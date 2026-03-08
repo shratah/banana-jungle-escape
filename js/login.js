@@ -1,5 +1,34 @@
 // Floating Banana Background Effect and form validation
 document.addEventListener("DOMContentLoaded", () => {
+    // Check for messages from PHP redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const container = document.querySelector(".login-container");
+    if (urlParams.has('error')) {
+        const error = urlParams.get('error');
+        let msg = "Login failed.";
+        if (error === 'incorrect') msg = "Incorrect password!";
+        else if (error === 'notfound') msg = "User not found!";
+        else if (error === 'db') msg = "Database connection error.";
+        
+        const errorMsg = document.createElement("p");
+        errorMsg.style.color = "#ff6b6b";
+        errorMsg.style.fontWeight = "bold";
+        errorMsg.style.marginBottom = "15px";
+        errorMsg.innerText = msg;
+        container.insertBefore(errorMsg, container.querySelector("form"));
+    } else if (urlParams.has('msg')) {
+        const msgStr = urlParams.get('msg');
+        let msg = "Success!";
+        if (msgStr === 'registered') msg = "Registration successful! Please login.";
+        
+        const successMsg = document.createElement("p");
+        successMsg.style.color = "#4CAF50";
+        successMsg.style.fontWeight = "bold";
+        successMsg.style.marginBottom = "15px";
+        successMsg.innerText = msg;
+        container.insertBefore(successMsg, container.querySelector("form"));
+    }
+
     const bgAnimation = document.getElementById("bg-animation");
     const numBananas = 15;
 

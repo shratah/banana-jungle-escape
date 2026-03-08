@@ -1,5 +1,22 @@
 // Floating Leaf Background Effect and form validation
 document.addEventListener("DOMContentLoaded", () => {
+    // Check for messages from PHP redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const container = document.querySelector(".register-container");
+    if (urlParams.has('error')) {
+        const error = urlParams.get('error');
+        let msg = "Registration failed.";
+        if (error === 'exists') msg = "Username or Email already exists.";
+        else if (error === 'db') msg = "Database connection error.";
+        
+        const errorMsg = document.createElement("p");
+        errorMsg.style.color = "#ff6b6b";
+        errorMsg.style.fontWeight = "bold";
+        errorMsg.style.marginBottom = "15px";
+        errorMsg.innerText = msg;
+        container.insertBefore(errorMsg, container.querySelector("form"));
+    }
+
     const bgAnimation = document.getElementById("bg-animation");
     const numLeaves = 20;
 
