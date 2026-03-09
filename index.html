@@ -1,23 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Simple Banana Game</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banana Jungle Escape</title>
+    <link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 
-<h1>🍌 Banana Collection Game</h1>
+    <div class="game-container" id="gameBox">
+        <h1>🍌 Banana Escape</h1>
 
-<p>❤️ Lives: <span id="lives">3</span></p>
-<p>🍌 Bananas: <span id="bananaCount">0</span> / 10</p>
+        <div class="stats">
+            <p>❤️ Lives: <span id="lives">3</span></p>
+            <p>🍌 Bananas: <span id="bananaCount">0</span> / 10</p>
+        </div>
 
-<!-- Placeholder image -->
-<img id="bananaImage" src="https://via.placeholder.com/150" width="150">
+        <div class="image-container">
+            <span class="loader" id="loader"></span>
+            <img id="bananaImage" src="" alt="Banana Puzzle" style="display: none;">
+        </div>
 
-<br><br>
-<input type="number" id="answer" placeholder="Enter answer">
-<button onclick="checkAnswer()">Submit</button>
+        <div class="input-group">
+            <input type="number" id="answer" placeholder="Enter solution" onkeypress="handleKeyPress(event)">
+            <button onclick="checkAnswer()">Submit</button>
+        </div>
+    </div>
 
-<script src="js/game.js"></script>
+    <!-- Container for dynamic toasts -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/game.js"></script>
 </body>
 </html>
