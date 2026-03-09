@@ -1,5 +1,6 @@
 let bananas = 0;
 let lives = 3;
+let coins = 0;
 let correctAnswer = 0;
 let isLoading = false;
 
@@ -25,6 +26,17 @@ function showToast(message, type = 'info') {
 
 // Fetch a puzzle from the Banana API
 async function loadPuzzle() {
+    // Load persisted state
+    const savedLives = localStorage.getItem('jungleLives');
+    const savedCoins = localStorage.getItem('jungleCoins');
+    if (savedLives !== null) lives = parseInt(savedLives);
+    if (savedCoins !== null) coins = parseInt(savedCoins);
+    
+    // Update newly added UI elements
+    const coinCounter = document.getElementById("coinCount");
+    if (coinCounter) coinCounter.innerText = coins;
+    document.getElementById("lives").innerText = lives;
+
     if (isLoading) return;
     isLoading = true;
     
@@ -89,9 +101,11 @@ function checkAnswer() {
         setTimeout(() => gameBox.classList.remove('shake'), 500);
     }
 
-    // Update Stats UI
+    // Update Stats UI & Local Storage
     document.getElementById("bananaCount").innerText = bananas;
     document.getElementById("lives").innerText = lives;
+    localStorage.setItem('jungleLives', lives);
+
     answerInput.value = ""; 
 
     // Win/Loss Condition Check

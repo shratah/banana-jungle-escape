@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Minigame - Banana Jungle Escape</title>
+    <link rel="stylesheet" href="css/minigame.css">
+    <link rel="stylesheet" href="css/style.css"> <!-- Import original glass style and toasts -->
+</head>
+<body>
+
+    <div class="game-container minigame-box" id="minigameBox">
+        
+        <!-- Navigation Header -->
+        <div class="header-nav">
+            <a href="index.html" class="nav-btn">⬅️ Back to Escape</a>
+            <h1>🃏 Jungle Match</h1>
+        </div>
+
+        <div class="stats minigame-stats">
+            <p>🪙 Coins: <span id="coinCount">0</span></p>
+            <p>❤️ Lives: <span id="lives">3</span></p>
+            <button class="buy-btn" onclick="buyLife()">Buy ❤️ (100🪙)</button>
+        </div>
+
+        <p class="instruction-text">Find the matching pairs of bananas to earn coins!</p>
+
+        <!-- Memory Grid -->
+        <div class="memory-grid" id="memoryGrid">
+            <!-- Cards injected by JS -->
+        </div>
+        
+    </div>
+
+    <!-- Container for dynamic toasts -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/minigame.js"></script>
+</body>
+</html>
