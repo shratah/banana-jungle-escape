@@ -1,6 +1,8 @@
 // Game State Variables
 let coins = 0;
 let lives = 3;
+let sessionCoins = 0;
+let startTime = Date.now();
 
 // Memory Game Variables
 const cardValues = ['🍌', '🍌', '🍌🍌', '🍌🍌', '🍌🍌🍌', '🍌🍌🍌', '🍌🍌🍌🍌', '🍌🍌🍌🍌'];
@@ -128,6 +130,7 @@ function checkForMatch() {
     if(isMatch) {
         disableCards();
         coins += 25; // Award coins
+        sessionCoins += 25;
         updateUI();
         showToast("Match found! +25 🪙", "success");
         matchCount++;
@@ -170,6 +173,35 @@ function resetBoard() {
     [hasFlippedCard, lockBoard] = [false, false];
     [firstCard, secondCard] = [null, null];
 }
+
+// Save Session to Database
+function saveSession() {
+    const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+    const formData = new FormData();
+    formData.append('game_type', 'minigame');
+    formData.append('score', matchCount);
+    formData.append('coins_earned', sessionCoins);
+    formData.append('time_spent', timeSpent);
+
+    fetch('save_score.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success' && data.achievements.length > 0) {
+            showToast(`Unlocked Achievements: ${data.achievements.join(', ')}! 🌟`, 'success');
+        }
+    })
+    .catch(err => console.error('Error saving session:', err));
+}
+
+// Handle Page Visibility / Exit
+window.addEventListener('beforeunload', () => {
+    if (sessionCoins > 0 || matchCount > 0) {
+        saveSession();
+    }
+});
 
 // Start game on load
 window.onload = initGame;

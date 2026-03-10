@@ -3,6 +3,7 @@ let lives = 3;
 let coins = 0;
 let correctAnswer = 0;
 let isLoading = false;
+let startTime = Date.now();
 
 // Custom Toast Notification System
 function showToast(message, type = 'info') {
@@ -50,7 +51,7 @@ async function loadPuzzle() {
     inputField.disabled = true;
 
     try {
-        const response = await fetch('http://marcconrad.com/uob/banana/api.php?out=json');
+        const response = await fetch('proxy.php');
         const data = await response.json();
         
         // The API returns { question: "url", solution: number }
@@ -110,17 +111,19 @@ function checkAnswer() {
 
     // Win/Loss Condition Check
     if(lives <= 0) {
+        saveSession('main', bananas, 0);
         setTimeout(() => {
             alert("Game Over 💀 The jungle got you!");
-            location.reload();
+            location.href = 'dashboard.php';
         }, 500);
         return;
     }
 
     if(bananas >= 10) {
+        saveSession('main', bananas, 0);
         setTimeout(() => {
             alert("You Escaped! 🏆 Great job solving the puzzles!");
-            location.reload();
+            location.href = 'dashboard.php';
         }, 500);
         return;
     }
@@ -136,5 +139,27 @@ function handleKeyPress(event) {
     }
 }
 
+// Save Session to Database
+function saveSession(type, score, coinsEarned) {
+    const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+    const formData = new FormData();
+    formData.append('game_type', type);
+    formData.append('score', score);
+    formData.append('coins_earned', coinsEarned);
+    formData.append('time_spent', timeSpent);
+
+    fetch('save_score.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success' && data.achievements.length > 0) {
+            showToast(`Unlocked Achievements: ${data.achievements.join(', ')}! 🌟`, 'success');
+        }
+    })
+    .catch(err => console.error('Error saving session:', err));
+}
+
 // Start the first puzzle when script loads
-window.onload = loadPuzzle;
+window.onload = loadPuzzle;
