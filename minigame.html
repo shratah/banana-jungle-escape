@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,33 +8,46 @@
     <link rel="stylesheet" href="css/minigame.css">
     <link rel="stylesheet" href="css/style.css"> <!-- Import original glass style and toasts -->
 </head>
+
 <body>
 
     <div class="game-container minigame-box" id="minigameBox">
-        
         <!-- Navigation Header -->
         <div class="header-nav">
             <div style="display: flex; gap: 10px;">
                 <a href="index.html" class="nav-btn">⬅️ Escape</a>
-                <a href="dashboard.php" class="nav-btn" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border-color: #38bdf8;">📊 Dash</a>
+                <a href="dashboard.php" class="nav-btn"
+                    style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border-color: #38bdf8;">📊 Dash</a>
             </div>
             <h1>🃏 Jungle Match</h1>
         </div>
 
-
-        <div class="stats minigame-stats">
-            <p>🪙 Coins: <span id="coinCount">0</span></p>
-            <p>❤️ Lives: <span id="lives">3</span></p>
-            <button class="buy-btn" onclick="buyLife()">Buy ❤️ (100🪙)</button>
+        <div class="stats">
+            <p>🪙 <span id="coinCount">0</span></p>
+            <p>❤️ <span id="lives">3</span></p>
+            <p class="timer">⏱️ <span id="gameTimer">60s</span></p>
+            <button class="buy-btn" onclick="buyLife()" style="padding: 5px 10px; font-size: 0.8rem;">Buy ❤️
+                (100🪙)</button>
+            <button onclick="togglePause()" class="pause-btn" style="padding: 5px 10px; font-size: 0.8rem;">⏸️
+                Pause</button>
         </div>
 
-        <p class="instruction-text">Find the matching pairs of bananas to earn coins!</p>
+        <p class="instruction-text" style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-dim);">Find
+            matching pairs to earn coins!</p>
 
         <!-- Memory Grid -->
         <div class="memory-grid" id="memoryGrid">
             <!-- Cards injected by JS -->
         </div>
-        
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay" class="overlay">
+        <div class="overlay-content">
+            <h2>Game Paused</h2>
+            <button onclick="togglePause()">Resume</button>
+            <a href="dashboard.php" class="btn-link">Dashboard</a>
+        </div>
     </div>
 
     <!-- Container for dynamic toasts -->
@@ -41,4 +55,5 @@
 
     <script src="js/minigame.js"></script>
 </body>
+
 </html>

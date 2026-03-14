@@ -3,6 +3,9 @@ let coins = 0;
 let lives = 3;
 let sessionCoins = 0;
 let startTime = Date.now();
+let isPaused = false;
+let timerSeconds = 60;
+let timerInterval = null;
 
 // Memory Game Variables
 const cardValues = ['🍌', '🍌', '🍌🍌', '🍌🍌', '🍌🍌🍌', '🍌🍌🍌', '🍌🍌🍌🍌', '🍌🍌🍌🍌'];
@@ -13,16 +16,20 @@ let firstCard, secondCard;
 let matchCount = 0;
 
 // Initialize Game
-function initGame() {
-    // Load state from local storage or set defaults
-    const savedCoins = localStorage.getItem('jungleCoins');
-    const savedLives = localStorage.getItem('jungleLives');
-
-    if(savedCoins !== null) coins = parseInt(savedCoins);
-    if(savedLives !== null) lives = parseInt(savedLives);
+async function initGame() {
+    // Load state from server
+    try {
+        const statsResponse = await fetch('sync_stats.php');
+        const statsData = await statsResponse.json();
+        if (statsData.status === 'success') {
+            lives = statsData.lives;
+            coins = statsData.coins;
+        }
+    } catch (e) { console.error("Error syncing stats:", e); }
 
     updateUI();
     setupBoard();
+    startTimer();
 }
 
 // Custom Toast Notification System
@@ -30,10 +37,10 @@ function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     let icon = 'ℹ️';
-    if(type === 'success') icon = '✅';
-    if(type === 'error') icon = '❌';
+    if (type === 'success') icon = '✅';
+    if (type === 'error') icon = '❌';
 
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
     container.appendChild(toast);
@@ -47,15 +54,19 @@ function showToast(message, type = 'info') {
 function updateUI() {
     document.getElementById('coinCount').innerText = coins;
     document.getElementById('lives').innerText = lives;
+    syncStats();
+}
 
-    // Save to local storage
-    localStorage.setItem('jungleCoins', coins);
-    localStorage.setItem('jungleLives', lives);
+function syncStats() {
+    const formData = new FormData();
+    formData.append('coins', coins);
+    formData.append('lives', lives);
+    fetch('sync_stats.php', { method: 'POST', body: formData });
 }
 
 // Buy Life logic
 function buyLife() {
-    if(coins >= 100) {
+    if (coins >= 100) {
         coins -= 100;
         lives++;
         updateUI();
@@ -105,7 +116,7 @@ function setupBoard() {
 
 // Card clicked
 function flipCard(event) {
-    if (lockBoard) return;
+    if (lockBoard || isPaused) return; // Prevent clicking while paused
     const clickedCard = event.currentTarget;
     if (clickedCard === firstCard) return; // Prevent double click
 
@@ -127,7 +138,7 @@ function flipCard(event) {
 function checkForMatch() {
     let isMatch = firstCard.dataset.val === secondCard.dataset.val;
 
-    if(isMatch) {
+    if (isMatch) {
         disableCards();
         coins += 25; // Award coins
         sessionCoins += 25;
@@ -135,9 +146,13 @@ function checkForMatch() {
         showToast("Match found! +25 🪙", "success");
         matchCount++;
 
-        if(matchCount === 4) {
+        if (matchCount === 4) {
             setTimeout(() => {
-                showToast("Board cleared! Reshuffling...", "info");
+                showToast("Board cleared! +50 🪙 bonus", "success");
+                coins += 50;
+                sessionCoins += 50;
+                updateUI();
+                timerSeconds += 10; // Extra time reward
                 setTimeout(setupBoard, 1500);
             }, 1000);
         }
@@ -151,7 +166,7 @@ function checkForMatch() {
 function disableCards() {
     firstCard.removeEventListener('click', flipCard);
     secondCard.removeEventListener('click', flipCard);
-    
+
     firstCard.classList.add('matched');
     secondCard.classList.add('matched');
 
@@ -187,13 +202,13 @@ function saveSession() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if(data.status === 'success' && data.achievements.length > 0) {
-            showToast(`Unlocked Achievements: ${data.achievements.join(', ')}! 🌟`, 'success');
-        }
-    })
-    .catch(err => console.error('Error saving session:', err));
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.achievements.length > 0) {
+                showToast(`Unlocked Achievements: ${data.achievements.join(', ')}! 🌟`, 'success');
+            }
+        })
+        .catch(err => console.error('Error saving session:', err));
 }
 
 // Handle Page Visibility / Exit
@@ -202,6 +217,41 @@ window.addEventListener('beforeunload', () => {
         saveSession();
     }
 });
+
+// Timer Logic
+function startTimer() {
+    timerSeconds = 60;
+    updateTimerUI();
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (!isPaused) {
+            timerSeconds--;
+            updateTimerUI();
+            if (timerSeconds <= 0) {
+                stopTimer();
+                showToast("Time's up! Session ended.", "error");
+                saveSession();
+                setTimeout(() => location.href = 'dashboard.php', 2000);
+            }
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+}
+
+function updateTimerUI() {
+    const timerEl = document.getElementById('gameTimer');
+    if (timerEl) timerEl.innerText = timerSeconds + "s";
+}
+
+// Pause Game
+function togglePause() {
+    isPaused = !isPaused;
+    const pauseOverlay = document.getElementById('pauseOverlay');
+    if (pauseOverlay) pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+}
 
 // Start game on load
 window.onload = initGame;

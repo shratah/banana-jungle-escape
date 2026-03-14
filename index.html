@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banana Jungle Escape</title>
     <link rel="stylesheet" href="css/style.css?v=2">
 </head>
+
 <body>
 
     <div class="game-container" id="gameBox">
@@ -19,6 +21,7 @@
             <p>🪙 Coins: <span id="coinCount">0</span></p>
             <p>❤️ Lives: <span id="lives">3</span></p>
             <p>🍌 Bananas: <span id="bananaCount">0</span> / 10</p>
+            <p class="timer">⏱️ <span id="gameTimer">30s</span></p>
         </div>
 
         <div class="image-container">
@@ -29,12 +32,26 @@
         <div class="input-group">
             <input type="number" id="answer" placeholder="Enter solution" onkeypress="handleKeyPress(event)">
             <button onclick="checkAnswer()">Submit</button>
+            <button onclick="togglePause()" class="pause-btn">⏸️ Pause</button>
         </div>
     </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay" class="overlay">
+        <div class="overlay-content">
+            <h2>Game Paused</h2>
+            <button onclick="togglePause()">Resume</button>
+            <a href="dashboard.php" class="btn-link">Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Falling Game Container -->
+    <div id="fallingGameContainer" class="falling-container"></div>
 
     <!-- Container for dynamic toasts -->
     <div class="toast-container" id="toastContainer"></div>
 
     <script src="js/game.js"></script>
 </body>
+
 </html>

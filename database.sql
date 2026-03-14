@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL,
     password VARCHAR(255) NOT NULL,
+    current_coins INT(11) DEFAULT 0,
+    current_lives INT(11) DEFAULT 3,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -43,4 +45,4 @@ INSERT IGNORE INTO achievements (name, description, points) VALUES
 ('Coin Collector', 'Earn 500 coins in total', 30),
 ('Puzzle Master', 'Solve 50 puzzles correctly', 100),
 ('Minigame Pro', 'Clear the memory board 5 times', 40);
-
+
