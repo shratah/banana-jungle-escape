@@ -10,6 +10,13 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
+// Fetch Current Balance
+$balance_sql = "SELECT current_coins, current_lives FROM users WHERE id = ?";
+$stmt = $conn->prepare($balance_sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$user_balance = $stmt->get_result()->fetch_assoc();
+
 // Fetch User Stats
 $stats_sql = "SELECT 
     SUM(score) as total_score, 
@@ -94,8 +101,8 @@ $leaderboard_result = $conn->query($leaderboard_sql);
                 <div class="stat-card">
                     <div class="icon">🪙</div>
                     <div class="info">
-                        <h3>Total Coins</h3>
-                        <p><?php echo number_format($stats['total_coins'] ?? 0); ?></p>
+                        <h3>Available Coins</h3>
+                        <p id="currentCoinsDisplay"><?php echo number_format($user_balance['current_coins'] ?? 0); ?></p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -177,8 +184,74 @@ $leaderboard_result = $conn->query($leaderboard_sql);
                         <?php endwhile; ?>
                     </div>
                 </section>
+
+                <!-- Shop Section -->
+                <section class="card shop-section">
+                    <h2>🛒 Jungle Shop</h2>
+                    <div class="shop-grid">
+                        <div class="shop-item">
+                            <div class="icon">🧲</div>
+                            <h4>Shield Magnet</h4>
+                            <p class="description">Auto-collect coins!</p>
+                            <p class="price">200 🪙</p>
+                            <button class="buy-btn" onclick="buyItem('powerup', 'magnet')">Buy Power-up</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon">⏸️</div>
+                            <h4>Time Freeze</h4>
+                            <p class="description">Stop falling items!</p>
+                            <p class="price">200 🪙</p>
+                            <button class="buy-btn" onclick="buyItem('powerup', 'freeze')">Buy Power-up</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon">🌈</div>
+                            <h4>Rainbow Mode</h4>
+                            <p class="description">Double coin value!</p>
+                            <p class="price">200 🪙</p>
+                            <button class="buy-btn" onclick="buyItem('powerup', 'rainbow')">Buy Power-up</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon">🍀</div>
+                            <h4>Lucky Charm</h4>
+                            <p class="description">Rare item boost!</p>
+                            <p class="price">200 🪙</p>
+                            <button class="buy-btn" onclick="buyItem('powerup', 'lucky')">Buy Power-up</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon">💎</div>
+                            <h4>Perfectionist</h4>
+                            <p class="description">Buy this Achievement</p>
+                            <p class="price">500 🪙</p>
+                            <button class="buy-btn" onclick="buyItem('achievement', 'Perfectionist')">Unlock Now</button>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
+
+    <script>
+    function buyItem(category, name) {
+        const formData = new FormData();
+        formData.append('action', category === 'powerup' ? 'buy_powerup' : 'buy_achievement');
+        formData.append(category === 'powerup' ? 'type' : 'name', name);
+
+        fetch('shop_actions.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(`Successfully purchased ${name}!`);
+                document.getElementById('currentCoinsDisplay').innerText = data.new_coins.toLocaleString();
+                if (category === 'achievement') location.reload(); // Refresh to show unlocked achievement
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+    </script>
 </body>
 </html>

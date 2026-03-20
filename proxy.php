@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-$url = 'http://marcconrad.com/uob/banana/api.php?out=json';
+$url = 'http://marcconrad.com/uob/banana/api.php?out=json&base64=yes';
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $url);

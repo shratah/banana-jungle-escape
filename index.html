@@ -18,11 +18,14 @@
         </div>
 
         <div class="stats">
-            <p>🪙 Coins: <span id="coinCount">0</span></p>
-            <p>❤️ Lives: <span id="lives">3</span></p>
-            <p>🍌 Bananas: <span id="bananaCount">0</span> / 10</p>
+            <p style="width: 100%; border-bottom: 1px solid var(--glass); padding-bottom: 5px; margin-bottom: 5px;">🏆 Level: <span id="currentLevel">1</span>/10 | 🧩 Puzzle: <span id="puzzleProgress">1</span>/3</p>
+            <p>🪙 <span id="coinCount">0</span></p>
+            <p>❤️ <span id="lives">3</span></p>
+            <p>🍌 <span id="bananaCount">0</span></p>
             <p class="timer">⏱️ <span id="gameTimer">30s</span></p>
         </div>
+
+        <div id="powerupInventory" class="powerup-inventory"></div>
 
         <div class="image-container">
             <span class="loader" id="loader"></span>

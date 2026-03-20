@@ -162,6 +162,10 @@ header p {
     font-weight: 700;
 }
 
+#currentCoinsDisplay {
+    color: var(--primary);
+}
+
 /* Main Grid Layout */
 .main-grid {
     display: grid;
@@ -265,6 +269,74 @@ td {
 .ach-info p {
     font-size: 0.85rem;
     color: var(--text-dim);
+}
+
+/* Shop Section Styling */
+.shop-section {
+    grid-column: span 2;
+    margin-top: 1rem;
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.shop-item {
+    background: var(--glass);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.shop-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-5px);
+}
+
+.shop-item .icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.shop-item h4 {
+    margin-bottom: 0.5rem;
+    color: var(--text-main);
+}
+
+.shop-item .price {
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+}
+
+.buy-btn {
+    width: 100%;
+    padding: 0.8rem;
+    background: var(--primary);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.buy-btn:hover {
+    background: #fff;
+    transform: scale(1.02);
+}
+
+.buy-btn:disabled {
+    background: var(--text-dim);
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 /* Responsive */

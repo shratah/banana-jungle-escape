@@ -10,23 +10,20 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Update stats
-    $coins = isset($_POST['coins']) ? intval($_POST['coins']) : null;
-    $lives = isset($_POST['lives']) ? intval($_POST['lives']) : null;
-
     $updates = [];
     $params = [];
     $types = "";
 
-    if ($coins !== null) {
-        $updates[] = "current_coins = ?";
-        $params[] = $coins;
-        $types .= "i";
-    }
-    if ($lives !== null) {
-        $updates[] = "current_lives = ?";
-        $params[] = $lives;
-        $types .= "i";
+    $fields = ['coins' => 'current_coins', 'lives' => 'current_lives', 'level' => 'current_level', 
+               'theme' => 'theme', 'language' => 'language', 'magnet' => 'powerup_magnet', 
+               'freeze' => 'powerup_freeze', 'rainbow' => 'powerup_rainbow', 'lucky' => 'powerup_lucky'];
+
+    foreach ($fields as $post_key => $db_col) {
+        if (isset($_POST[$post_key])) {
+            $updates[] = "$db_col = ?";
+            $params[] = $_POST[$post_key];
+            $types .= (is_numeric($_POST[$post_key]) ? "i" : "s");
+        }
     }
 
     if (!empty($updates)) {
@@ -44,12 +41,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo json_encode(['status' => 'error', 'message' => 'No stats provided']);
     }
 } else {
-    // Fetch stats
-    $sql = "SELECT current_coins, current_lives FROM users WHERE id = ?";
+    // Fetch all stats and preferences
+    $sql = "SELECT current_coins as coins, current_lives as lives, current_level as level, theme, language, 
+                   powerup_magnet as magnet, powerup_freeze as freeze, powerup_rainbow as rainbow, 
+                   powerup_lucky as lucky FROM users WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
-    echo json_encode(['status' => 'success', 'coins' => $result['current_coins'], 'lives' => $result['current_lives']]);
+    echo json_encode(array_merge(['status' => 'success'], $result));
 }
 ?>

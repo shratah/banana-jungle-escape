@@ -6,6 +6,7 @@ let startTime = Date.now();
 let isPaused = false;
 let timerSeconds = 60;
 let timerInterval = null;
+let currentLevel = 1;
 
 // Memory Game Variables
 const cardValues = ['🍌', '🍌', '🍌🍌', '🍌🍌', '🍌🍌🍌', '🍌🍌🍌', '🍌🍌🍌🍌', '🍌🍌🍌🍌'];
@@ -24,6 +25,7 @@ async function initGame() {
         if (statsData.status === 'success') {
             lives = statsData.lives;
             coins = statsData.coins;
+            currentLevel = statsData.level;
         }
     } catch (e) { console.error("Error syncing stats:", e); }
 
@@ -54,6 +56,8 @@ function showToast(message, type = 'info') {
 function updateUI() {
     document.getElementById('coinCount').innerText = coins;
     document.getElementById('lives').innerText = lives;
+    const levelEl = document.getElementById('currentLevel');
+    if (levelEl) levelEl.innerText = currentLevel;
     syncStats();
 }
 
@@ -61,6 +65,7 @@ function syncStats() {
     const formData = new FormData();
     formData.append('coins', coins);
     formData.append('lives', lives);
+    formData.append('level', currentLevel);
     fetch('sync_stats.php', { method: 'POST', body: formData });
 }
 

@@ -8,6 +8,13 @@ let isPaused = false;
 let timerSeconds = 30;
 let timerInterval = null;
 let shieldActive = false;
+let nextPuzzleData = null;
+let isPreFetching = false;
+let currentLevel = 1;
+let puzzlesInLevel = 0;
+let heartsLostInLevel = false;
+let powerups = { magnet: 0, freeze: 0, rainbow: 0, lucky: 0 };
+let activePowerups = { magnet: false, freeze: false, rainbow: false, lucky: false };
 
 // Custom Toast Notification System
 function showToast(message, type = 'info') {
@@ -29,22 +36,39 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Fetch a puzzle from the Banana API
-async function loadPuzzle() {
-    // Load persisted state from server instead of localStorage
+// Prefetch the next puzzle in the background
+async function preFetchNextPuzzle() {
+    if (isPreFetching || nextPuzzleData) return;
+    isPreFetching = true;
     try {
-        const statsResponse = await fetch('sync_stats.php');
-        const statsData = await statsResponse.json();
-        if (statsData.status === 'success') {
-            lives = statsData.lives;
-            coins = statsData.coins;
+        const response = await fetch('proxy.php');
+        const data = await response.json();
+        if (data.question && data.solution !== undefined) {
+            // Preload the base64 image immediately
+            const img = new Image();
+            img.onload = () => {
+                nextPuzzleData = data;
+                isPreFetching = false;
+            };
+            img.src = data.question; // Data is already base64 data URL
         }
-    } catch (e) { console.error("Error syncing stats:", e); }
+    } catch (e) {
+        console.error("Prefetch error:", e);
+        isPreFetching = false;
+    }
+}
 
-    // Update newly added UI elements
+// Display the puzzle (uses pre-fetched data if available)
+async function loadPuzzle() {
+    // Update UI elements
     const coinCounter = document.getElementById("coinCount");
     if (coinCounter) coinCounter.innerText = coins;
-    document.getElementById("lives").innerText = lives;
+    const livesEl = document.getElementById("lives");
+    if (livesEl) livesEl.innerText = lives;
+    const levelEl = document.getElementById("currentLevel");
+    if (levelEl) levelEl.innerText = currentLevel;
+    const progressEl = document.getElementById("puzzleProgress");
+    if (progressEl) progressEl.innerText = puzzlesInLevel + 1;
 
     if (isLoading) return;
     isLoading = true;
@@ -58,32 +82,58 @@ async function loadPuzzle() {
     loader.style.display = 'inline-block';
     inputField.disabled = true;
 
-    try {
-        const response = await fetch('proxy.php');
-        const data = await response.json();
+    // Use pre-fetched data if ready, otherwise fetch immediately
+    let data = nextPuzzleData;
+    nextPuzzleData = null; // Consume the cache
 
-        // The API returns { question: "url", solution: number }
-        correctAnswer = data.solution;
-
-        // Preload image to avoid flicker
-        const img = new Image();
-        img.onload = () => {
-            imgElement.src = data.question;
-            imgElement.style.display = 'block';
-            loader.style.display = 'none';
-            inputField.disabled = false;
-            inputField.focus();
+    if (!data) {
+        try {
+            const response = await fetch('proxy.php');
+            data = await response.json();
+        } catch (error) {
+            console.error("Error fetching puzzle:", error);
+            showToast("Failed to load puzzle. Retrying...", "error");
             isLoading = false;
-            startTimer();
-        };
-        img.src = data.question;
-
-    } catch (error) {
-        console.error("Error fetching puzzle:", error);
-        showToast("Failed to load puzzle. Retrying...", "error");
-        isLoading = false;
-        setTimeout(loadPuzzle, 2000); // Retry after 2 seconds
+            setTimeout(loadPuzzle, 2000);
+            return;
+        }
     }
+
+    // Display the puzzle
+    correctAnswer = data.solution;
+    imgElement.src = data.question;
+    imgElement.style.display = 'block';
+    loader.style.display = 'none';
+    inputField.disabled = false;
+    inputField.focus();
+    isLoading = false;
+    startTimer();
+
+    // Start fetching the NEXT one immediately in identifying background
+    preFetchNextPuzzle();
+}
+
+// Initial stats load (one time only)
+async function initialStatsLoad() {
+    try {
+        const statsResponse = await fetch('sync_stats.php');
+        const statsData = await statsResponse.json();
+        if (statsData.status === 'success') {
+            coins = statsData.coins;
+            lives = statsData.lives;
+            currentLevel = statsData.level;
+            powerups = {
+                magnet: statsData.magnet || 0,
+                freeze: statsData.freeze || 0,
+                rainbow: statsData.rainbow || 0,
+                lucky: statsData.lucky || 0
+            };
+            updatePowerupUI();
+            document.getElementById("lives").innerText = lives;
+            const coinCounter = document.getElementById("coinCount");
+            if (coinCounter) coinCounter.innerText = coins;
+        }
+    } catch (e) { console.error("Error loading stats:", e); }
 }
 
 // Check user answer
@@ -100,11 +150,19 @@ function checkAnswer() {
 
     if (parseInt(userAnswer) === correctAnswer) {
         bananas++;
-        showToast("Correct! You collected a banana! 🍌", "success");
+        puzzlesInLevel++;
+        showToast("Correct! 🧩 Progress: " + puzzlesInLevel + "/3", "success");
         stopTimer();
-        startFallingGame(); // Start the bonus game!
+        
+        // Check if level is completed (after bonus game)
+        if (puzzlesInLevel >= 3) {
+            handleLevelCompletion();
+        } else {
+            startFallingGame(); // Start the bonus game!
+        }
     } else {
         lives--;
+        heartsLostInLevel = true;
         showToast(`Wrong! You lost a life ❤️`, "error");
 
         // Add shake animation
@@ -116,31 +174,52 @@ function checkAnswer() {
     // Update Stats UI & Sync with Server
     document.getElementById("bananaCount").innerText = bananas;
     document.getElementById("lives").innerText = lives;
-    syncStats(); // Save to database instead of localStorage
+    syncStats();
 
     answerInput.value = "";
 
     // Win/Loss Condition Check
-    if (lives <= 0) {
+    if (checkGameOver()) return;
+
+    if (currentLevel > 10) {
         saveSession('main', bananas, 0);
         setTimeout(() => {
-            alert("Game Over 💀 The jungle got you!");
+            alert("CONGRATULATIONS! 🏆 You've cleared all 10 levels of the Jungle!");
             location.href = 'dashboard.php';
         }, 500);
         return;
     }
 
-    if (bananas >= 10) {
-        saveSession('main', bananas, 0);
-        setTimeout(() => {
-            alert("You Escaped! 🏆 Great job solving the puzzles!");
-            location.href = 'dashboard.php';
-        }, 500);
-        return;
+    // Load next puzzle if game continues and not waiting for level animation
+    if (puzzlesInLevel < 3) {
+        loadPuzzle();
+    }
+}
+
+function handleLevelCompletion() {
+    const isPerfect = !heartsLostInLevel;
+    showToast(`Level ${currentLevel} COMPLETED! 🏆`, "success");
+    
+    // Save session with level completion info
+    saveSession('main', bananas, 0, currentLevel, isPerfect);
+
+    // If perfect, award bonus coins
+    if (isPerfect) {
+        coins += 300;
+        showToast("PERFECTIONIST! +300 🪙 Bonus!", "success");
+        document.getElementById("coinCount").innerText = coins;
     }
 
-    // Load next puzzle if game continues
-    loadPuzzle();
+    currentLevel++;
+    puzzlesInLevel = 0;
+    heartsLostInLevel = false;
+
+    // Small delay before starting next level
+    setTimeout(() => {
+        if (!checkGameOver() && currentLevel <= 10) {
+            loadPuzzle();
+        }
+    }, 2000);
 }
 
 // Allow pressing Enter to submit
@@ -151,7 +230,7 @@ function handleKeyPress(event) {
 }
 
 // Save Session to Database
-function saveSession(type, score, coinsEarned) {
+function saveSession(type, score, coinsEarned, levelCompleted = 0, isPerfect = false) {
     stopTimer();
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
     const formData = new FormData();
@@ -159,6 +238,10 @@ function saveSession(type, score, coinsEarned) {
     formData.append('score', score);
     formData.append('coins_earned', coinsEarned);
     formData.append('time_spent', timeSpent);
+    if (levelCompleted > 0) {
+        formData.append('level_completed', levelCompleted);
+        formData.append('perfect_level', isPerfect ? 'true' : 'false');
+    }
 
     fetch('save_score.php', {
         method: 'POST',
@@ -178,6 +261,7 @@ function syncStats() {
     const formData = new FormData();
     formData.append('coins', coins);
     formData.append('lives', lives);
+    formData.append('level', currentLevel);
     fetch('sync_stats.php', { method: 'POST', body: formData });
 }
 
@@ -216,6 +300,52 @@ function togglePause() {
     isPaused = !isPaused;
     const pauseOverlay = document.getElementById('pauseOverlay');
     if (pauseOverlay) pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+}
+
+// Power-up Activation
+function usePowerup(type) {
+    if (powerups[type] > 0 && !activePowerups[type]) {
+        powerups[type]--;
+        activePowerups[type] = true;
+        showToast(`ACTIVATED: ${type.toUpperCase()}! ⚡`, "success");
+        updatePowerupUI();
+        
+        // Duration logic
+        let duration = 5000; // 5 seconds
+        if (type === 'freeze') duration = 5000;
+        if (type === 'rainbow') duration = 8000;
+        if (type === 'magnet') duration = 10000;
+
+        setTimeout(() => {
+            activePowerups[type] = false;
+            showToast(`${type.toUpperCase()} expired.`, "info");
+        }, duration);
+
+        // Sync count to server
+        const formData = new FormData();
+        formData.append(type, powerups[type]);
+        fetch('sync_stats.php', { method: 'POST', body: formData });
+    } else {
+        showToast("Don't have this power-up! Visit Shop.", "error");
+    }
+}
+
+function updatePowerupUI() {
+    const container = document.getElementById('powerupInventory');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    for (const [type, count] of Object.entries(powerups)) {
+        if (count > 0) {
+            const btn = document.createElement('button');
+            const icons = { magnet: '🧲', freeze: '⏸️', rainbow: '🌈', lucky: '🍀' };
+            btn.innerHTML = `${icons[type]} ${count}`;
+            btn.className = 'pwr-btn';
+            btn.onclick = () => usePowerup(type);
+            container.appendChild(btn);
+        }
+    }
+}
     const inputField = document.getElementById("answer");
     if (inputField) inputField.disabled = isPaused;
 }
@@ -257,12 +387,14 @@ function createFallingObject() {
     const obj = document.createElement('div');
     obj.className = 'falling-object';
 
-    // Weighted random for types
+    // Weighted random for types (Improved by Lucky Charm)
     const rand = Math.random();
     let type = 'coin';
-    if (rand > 0.95) type = 'heart';
-    else if (rand > 0.85) type = 'shield';
-    else if (rand > 0.75) type = 'boost';
+    const luck = activePowerups.lucky ? 0.15 : 0; // Increase special item chance by 15%
+
+    if (rand > 0.95 - luck) type = 'heart';
+    else if (rand > 0.85 - luck) type = 'shield';
+    else if (rand > 0.75 - luck) type = 'boost';
 
     const symbols = {
         'coin': '🪙',
@@ -283,24 +415,37 @@ function createFallingObject() {
     let posY = -50;
     const speed = 2 + Math.random() * 3;
 
-    const fall = () => {
-        if (!isPaused) {
+    // Physics & Interaction
+    const gameLoop = setInterval(() => {
+        if (isPaused) return;
+        
+        // Time Freeze Check
+        if (!activePowerups.freeze) {
             posY += speed;
             obj.style.top = posY + 'px';
         }
 
-        if (posY < window.innerHeight) {
-            requestAnimationFrame(fall);
-        } else {
-            obj.remove();
+        // Magnet Logic: Auto-collect if sufficiently close (within 100px)
+        if (activePowerups.magnet) {
+            // Check distance to cursor or just auto-pick if in lower half? 
+            // Better: Auto-collect if posY is near the "catch" zone
+            if (posY > window.innerHeight - 200) {
+                catchObject(obj);
+                clearInterval(gameLoop);
+            }
         }
-    };
+
+        // Cleanup if missed
+        if (posY > window.innerHeight) {
+            obj.remove();
+            clearInterval(gameLoop);
+        }
+    }, 1000 / 60);
 
     obj.onmouseover = () => {
         catchObject(obj);
+        clearInterval(gameLoop);
     };
-
-    requestAnimationFrame(fall);
 }
 
 function catchObject(obj) {
@@ -308,8 +453,10 @@ function catchObject(obj) {
     obj.remove();
 
     if (type === 'coin') {
-        coins += 10;
-        showToast("+10 🪙", "success");
+        let val = 10;
+        if (activePowerups.rainbow) val = 20;
+        coins += val;
+        showToast(`+${val} 🪙`, "success");
     } else if (type === 'heart') {
         lives++;
         showToast("Extra Life! ❤️", "success");
@@ -328,4 +475,7 @@ function catchObject(obj) {
 }
 
 // Start the first puzzle when script loads
-window.onload = loadPuzzle;
+window.onload = async () => {
+    await initialStatsLoad();
+    loadPuzzle();
+};
