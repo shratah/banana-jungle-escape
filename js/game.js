@@ -300,6 +300,10 @@ function togglePause() {
     isPaused = !isPaused;
     const pauseOverlay = document.getElementById('pauseOverlay');
     if (pauseOverlay) pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+    
+    // Disable/Enable input based on pause state
+    const inputField = document.getElementById("answer");
+    if (inputField) inputField.disabled = isPaused;
 }
 
 // Power-up Activation
@@ -345,9 +349,6 @@ function updatePowerupUI() {
             container.appendChild(btn);
         }
     }
-}
-    const inputField = document.getElementById("answer");
-    if (inputField) inputField.disabled = isPaused;
 }
 
 function checkGameOver() {
