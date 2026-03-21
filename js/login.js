@@ -92,3 +92,23 @@ function createBanana(container) {
     
     container.appendChild(banana);
 }
+
+// Google Authentication Callback
+function handleCredentialResponse(response) {
+    const formData = new FormData();
+    formData.append('credential', response.credential);
+
+    fetch('google_auth.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = 'dashboard.php';
+        } else {
+            alert("Google Authentication failed: " + data.message);
+        }
+    })
+    .catch(err => console.error("Error:", err));
+}

@@ -128,6 +128,11 @@ async function initialStatsLoad() {
                 rainbow: statsData.rainbow || 0,
                 lucky: statsData.lucky || 0
             };
+            
+            // Apply Theme & Language
+            if (statsData.theme) document.body.className = 'theme-' + statsData.theme;
+            if (statsData.language) applyLanguage(statsData.language);
+
             updatePowerupUI();
             document.getElementById("lives").innerText = lives;
             const coinCounter = document.getElementById("coinCount");

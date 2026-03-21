@@ -15,25 +15,25 @@
         <!-- Navigation Header -->
         <div class="header-nav">
             <div style="display: flex; gap: 10px;">
-                <a href="index.html" class="nav-btn">⬅️ Escape</a>
-                <a href="dashboard.php" class="nav-btn"
+                <a href="index.html" class="nav-btn" data-t="escape">⬅️ Escape</a>
+                <a href="dashboard.php" class="nav-btn" data-t="dash"
                     style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border-color: #38bdf8;">📊 Dash</a>
             </div>
-            <h1>🃏 Jungle Match</h1>
+            <h1 data-t="jungle_match">🃏 Jungle Match</h1>
         </div>
 
         <div class="stats">
-            <p>🏆 Lvl: <span id="currentLevel">1</span></p>
-            <p>🪙 <span id="coinCount">0</span></p>
-            <p>❤️ <span id="lives">3</span></p>
-            <p class="timer">⏱️ <span id="gameTimer">60s</span></p>
-            <button class="buy-btn" onclick="buyLife()" style="padding: 5px 10px; font-size: 0.8rem;">Buy ❤️
+            <p><span data-t="level">🏆 Lvl</span>: <span id="currentLevel">1</span></p>
+            <p><span data-t="coins">🪙</span> <span id="coinCount">0</span></p>
+            <p><span data-t="lives">❤️</span> <span id="lives">3</span></p>
+            <p class="timer"><span data-t="timer">⏱️</span> <span id="gameTimer">60s</span></p>
+            <button class="buy-btn" onclick="buyLife()" style="padding: 5px 10px; font-size: 0.8rem;" data-t="buy_life">Buy ❤️
                 (100🪙)</button>
-            <button onclick="togglePause()" class="pause-btn" style="padding: 5px 10px; font-size: 0.8rem;">⏸️
+            <button onclick="togglePause()" class="pause-btn" style="padding: 5px 10px; font-size: 0.8rem;" data-t="pause">⏸️
                 Pause</button>
         </div>
 
-        <p class="instruction-text" style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-dim);">Find
+        <p class="instruction-text" style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-dim);" data-t="match_instruction">Find
             matching pairs to earn coins!</p>
 
         <!-- Memory Grid -->
@@ -45,15 +45,16 @@
     <!-- Pause Overlay -->
     <div id="pauseOverlay" class="overlay">
         <div class="overlay-content">
-            <h2>Game Paused</h2>
-            <button onclick="togglePause()">Resume</button>
-            <a href="dashboard.php" class="btn-link">Dashboard</a>
+            <h2 data-t="game_paused">Game Paused</h2>
+            <button onclick="togglePause()" data-t="resume">Resume</button>
+            <a href="dashboard.php" class="btn-link" data-t="dashboard">Dashboard</a>
         </div>
     </div>
 
     <!-- Container for dynamic toasts -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="js/lang.js"></script>
     <script src="js/minigame.js"></script>
 </body>
 

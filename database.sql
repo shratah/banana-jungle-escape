@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INT(11) AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL,
+    google_id VARCHAR(100) DEFAULT NULL,
     password VARCHAR(255) NOT NULL,
     current_coins INT(11) DEFAULT 0,
     current_lives INT(11) DEFAULT 3,

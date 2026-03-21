@@ -10,12 +10,12 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Fetch Current Balance
-$balance_sql = "SELECT current_coins, current_lives FROM users WHERE id = ?";
-$stmt = $conn->prepare($balance_sql);
+// Fetch User Preferences & Balance
+$user_sql = "SELECT current_coins, current_lives, theme, language FROM users WHERE id = ?";
+$stmt = $conn->prepare($user_sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$user_balance = $stmt->get_result()->fetch_assoc();
+$user_data = $stmt->get_result()->fetch_assoc();
 
 // Fetch User Stats
 $stats_sql = "SELECT 
@@ -64,21 +64,22 @@ $leaderboard_result = $conn->query($leaderboard_sql);
     <title>Dashboard - Banana Jungle Escape</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
+    <script src="js/lang.js"></script>
 </head>
-<body>
+<body class="theme-<?php echo $user_data['theme']; ?>">
     <div class="dashboard-container">
         <!-- Sidebar/Nav -->
         <nav class="sidebar">
             <div class="logo">🍌 Jungle Dash</div>
             <ul class="nav-links">
-                <li class="active"><a href="#">Summary</a></li>
-                <li><a href="index.html">Play Game</a></li>
-                <li><a href="minigame.html">Mini-Game</a></li>
-                <li><a href="logout.php">Logout</a></li>
+                <li class="active"><a href="#" data-t="summary">Summary</a></li>
+                <li><a href="index.html" data-t="play_game">Play Game</a></li>
+                <li><a href="minigame.html" data-t="minigame">Mini-Game</a></li>
+                <li><a href="logout.php" data-t="logout">Logout</a></li>
             </ul>
             <div class="user-info">
                 <div class="avatar"><?php echo strtoupper(substr($username, 0, 1)); ?></div>
-                <span><?php echo htmlspecialchars($username); ?></span>
+                <span data-t="welcome">Welcome</span>, <span><?php echo htmlspecialchars($username); ?></span>
             </div>
         </nav>
 
@@ -101,8 +102,8 @@ $leaderboard_result = $conn->query($leaderboard_sql);
                 <div class="stat-card">
                     <div class="icon">🪙</div>
                     <div class="info">
-                        <h3>Available Coins</h3>
-                        <p id="currentCoinsDisplay"><?php echo number_format($user_balance['current_coins'] ?? 0); ?></p>
+                        <h3 data-t="total_coins">Available Coins</h3>
+                        <p id="currentCoinsDisplay"><?php echo number_format($user_data['current_coins'] ?? 0); ?></p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -226,11 +227,60 @@ $leaderboard_result = $conn->query($leaderboard_sql);
                         </div>
                     </div>
                 </section>
+
+                <!-- Settings Section -->
+                <section class="card settings-section">
+                    <h2 data-t="settings">Settings & Customization</h2>
+                    
+                    <div class="settings-group">
+                        <label data-t="theme_select">Choose Theme</label>
+                        <div class="theme-grid">
+                            <button class="theme-opt forest" onclick="updateSetting('theme', 'forest')">Forest</button>
+                            <button class="theme-opt sea" onclick="updateSetting('theme', 'sea')">Sea</button>
+                            <button class="theme-opt banana" onclick="updateSetting('theme', 'banana')">Banana</button>
+                            <button class="theme-opt night" onclick="updateSetting('theme', 'night')">Night</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-group" style="margin-top: 2rem;">
+                        <label data-t="lang_select">Language</label>
+                        <div class="lang-grid">
+                            <button class="lang-opt" onclick="updateSetting('language', 'en')">English</button>
+                            <button class="lang-opt" onclick="updateSetting('language', 'ta')">தமிழ் (Tamil)</button>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
 
     <script>
+    const currentLang = "<?php echo $user_data['language']; ?>";
+    applyLanguage(currentLang);
+
+    function updateSetting(type, value) {
+        const formData = new FormData();
+        formData.append(type, value);
+
+        fetch('sync_stats.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(() => {
+            if (type === 'theme') {
+                document.body.className = 'theme-' + value;
+            } else if (type === 'language') {
+                applyLanguage(value);
+            }
+            showToast("Preference saved! ✨", "success");
+        })
+        .catch(err => console.error("Error updating setting:", err));
+    }
+
+    function showToast(msg, type) {
+        // Simple alert for now, can be improved
+        alert(msg);
+    }
     function buyItem(category, name) {
         const formData = new FormData();
         formData.append('action', category === 'powerup' ? 'buy_powerup' : 'buy_achievement');

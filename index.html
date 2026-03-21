@@ -11,18 +11,21 @@
 <body>
 
     <div class="game-container" id="gameBox">
-        <h1>🍌 Banana Escape</h1>
+        <h1 data-t="game_title">🍌 Banana Escape</h1>
         <div style="display: flex; gap: 15px; margin-bottom: 20px; justify-content: center;">
-            <a href="minigame.html" style="color: #f1c40f; text-decoration: none; font-weight: bold;">🃏 Mini-Game</a>
-            <a href="dashboard.php" style="color: #38bdf8; text-decoration: none; font-weight: bold;">📊 Dashboard</a>
+            <a href="minigame.html" style="color: #f1c40f; text-decoration: none; font-weight: bold;" data-t="minigame">🃏 Mini-Game</a>
+            <a href="dashboard.php" style="color: #38bdf8; text-decoration: none; font-weight: bold;" data-t="dashboard">📊 Dashboard</a>
         </div>
 
         <div class="stats">
-            <p style="width: 100%; border-bottom: 1px solid var(--glass); padding-bottom: 5px; margin-bottom: 5px;">🏆 Level: <span id="currentLevel">1</span>/10 | 🧩 Puzzle: <span id="puzzleProgress">1</span>/3</p>
-            <p>🪙 <span id="coinCount">0</span></p>
-            <p>❤️ <span id="lives">3</span></p>
-            <p>🍌 <span id="bananaCount">0</span></p>
-            <p class="timer">⏱️ <span id="gameTimer">30s</span></p>
+            <p style="width: 100%; border-bottom: 1px solid var(--glass); padding-bottom: 5px; margin-bottom: 5px;">
+                <span data-t="level">🏆 Level</span>: <span id="currentLevel">1</span>/10 | 
+                <span data-t="puzzle">🧩 Puzzle</span>: <span id="puzzleProgress">1</span>/3
+            </p>
+            <p><span data-t="coins">🪙</span> <span id="coinCount">0</span></p>
+            <p><span data-t="lives">❤️</span> <span id="lives">3</span></p>
+            <p><span data-t="bananas">🍌</span> <span id="bananaCount">0</span></p>
+            <p class="timer"><span data-t="timer">⏱️</span> <span id="gameTimer">30s</span></p>
         </div>
 
         <div id="powerupInventory" class="powerup-inventory"></div>
@@ -33,18 +36,18 @@
         </div>
 
         <div class="input-group">
-            <input type="number" id="answer" placeholder="Enter solution" onkeypress="handleKeyPress(event)">
-            <button onclick="checkAnswer()">Submit</button>
-            <button onclick="togglePause()" class="pause-btn">⏸️ Pause</button>
+            <input type="number" id="answer" data-t-placeholder="submit" onkeypress="handleKeyPress(event)">
+            <button onclick="checkAnswer()" data-t="submit">Submit</button>
+            <button onclick="togglePause()" class="pause-btn" data-t="pause">⏸️ Pause</button>
         </div>
     </div>
 
     <!-- Pause Overlay -->
     <div id="pauseOverlay" class="overlay">
         <div class="overlay-content">
-            <h2>Game Paused</h2>
-            <button onclick="togglePause()">Resume</button>
-            <a href="dashboard.php" class="btn-link">Dashboard</a>
+            <h2 data-t="game_paused">Game Paused</h2>
+            <button onclick="togglePause()" data-t="resume">Resume</button>
+            <a href="dashboard.php" class="btn-link" data-t="dashboard">Dashboard</a>
         </div>
     </div>
 
@@ -54,6 +57,7 @@
     <!-- Container for dynamic toasts -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="js/lang.js"></script>
     <script src="js/game.js"></script>
 </body>
 

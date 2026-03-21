@@ -26,6 +26,10 @@ async function initGame() {
             lives = statsData.lives;
             coins = statsData.coins;
             currentLevel = statsData.level;
+
+            // Apply Theme & Language
+            if (statsData.theme) document.body.className = 'theme-' + statsData.theme;
+            if (statsData.language) applyLanguage(statsData.language);
         }
     } catch (e) { console.error("Error syncing stats:", e); }
 
