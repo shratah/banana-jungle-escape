@@ -3,14 +3,14 @@ session_start();
 include 'db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
-    $email = $_POST['email'];
+    $email_or_username = $_POST['email'];
     $password = $_POST['password'];
 
-    $sql = "SELECT * FROM users WHERE email = ?";
+    $sql = "SELECT * FROM users WHERE email = ? OR username = ?";
     $stmt = $conn->prepare($sql);
     
     if ($stmt) {
-        $stmt->bind_param("s", $email);
+        $stmt->bind_param("ss", $email_or_username, $email_or_username);
         $stmt->execute();
         $result = $stmt->get_result();
 
