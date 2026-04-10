@@ -47,6 +47,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Achievement not found']);
             }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Not enough coins']);
+        }
+    }
     elseif ($action == 'claim_gift') {
         $gift_id = $_POST['gift_id'];
 
@@ -61,4 +65,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo json_encode(['status' => 'error', 'message' => 'Gift not available']);
         }
     }
+}
 ?>
