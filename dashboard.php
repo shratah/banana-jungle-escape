@@ -10,9 +10,6 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Check and award any missed achievements
-checkAndAwardAchievements($conn, $user_id);
-
 // Fetch User Preferences & Balance
 $user_sql = "SELECT current_coins, current_lives, current_level, theme, language FROM users WHERE id = ?";
 $stmt = $conn->prepare($user_sql);
@@ -23,12 +20,14 @@ if (!isset($user_data['current_level'])) {
     $user_data['current_level'] = 0;
 }
 
-// Fetch User Stats
+// Fetch User Stats - Including both main game and minigame
 $stats_sql = "SELECT 
     SUM(score) as total_score, 
-    SUM(coins_earned) as total_coins, 
+    SUM(coins_earned) as total_coins_earned, 
     COUNT(*) as games_played,
-    SUM(time_spent) as total_time
+    SUM(time_spent) as total_time,
+    SUM(CASE WHEN game_type = 'main' THEN coins_earned ELSE 0 END) as main_coins,
+    SUM(CASE WHEN game_type = 'minigame' THEN coins_earned ELSE 0 END) as minigame_coins
     FROM game_sessions WHERE user_id = ?";
 $stmt = $conn->prepare($stats_sql);
 $stmt->bind_param("i", $user_id);
@@ -57,6 +56,15 @@ $stmt = $conn->prepare($ach_sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $achievements = $stmt->get_result();
+
+// Fetch Gift Boxes
+$gifts_sql = "SELECT ug.id, a.name as achievement_name FROM user_giftboxes ug
+              JOIN achievements a ON ug.achievement_id = a.id
+              WHERE ug.user_id = ? AND ug.claimed = FALSE ORDER BY ug.id DESC";
+$stmt = $conn->prepare($gifts_sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$gifts = $stmt->get_result();
 
 // Fetch Top 10 Leaderboard
 
@@ -91,17 +99,17 @@ function checkAndAwardAchievements($conn, $user_id, $user_data) {
     // Award level achievements
     for ($level = 1; $level <= 10; $level++) {
         if ($current_level !== null && $current_level >= $level) {
-            awardAchievement($conn, $user_id, "Level $level");
+            awardAchievement($conn, $user_id, "Completed Level $level");
         }
     }
 
     // Award coin achievements based on total coins earned
-    if ($total_coins_earned >= 500) awardAchievement($conn, $user_id, "500 Coins");
-    if ($total_coins_earned >= 1000) awardAchievement($conn, $user_id, "1000 Coins");
+    if ($total_coins_earned >= 500) awardAchievement($conn, $user_id, "Collected 500 Coins");
+    if ($total_coins_earned >= 1000) awardAchievement($conn, $user_id, "Collected 1000 Coins");
 
     // Award banana achievements
-    if ($total_bananas >= 10) awardAchievement($conn, $user_id, "10 Bananas");
-    if ($total_bananas >= 20) awardAchievement($conn, $user_id, "20 Bananas");
+    if ($total_bananas >= 10) awardAchievement($conn, $user_id, "Collected 10 Bananas");
+    if ($total_bananas >= 20) awardAchievement($conn, $user_id, "Collected 20 Bananas");
 
     // Create gift box if coin achievement unlocked
     if ($total_coins_earned >= 500) {
@@ -125,17 +133,25 @@ function awardAchievement($conn, $user_id, $name) {
 }
 
 function createGiftBox($conn, $user_id) {
-    // Check if already has gift box
-    $check_sql = "SELECT id FROM user_giftboxes WHERE user_id = ? AND claimed = 0";
+    // Check if already has unclaimed gift box for 500 coins achievement
+    $check_sql = "SELECT ug.id FROM user_giftboxes ug 
+                  JOIN achievements a ON ug.achievement_id = a.id 
+                  WHERE ug.user_id = ? AND ug.claimed = FALSE AND a.name = 'Collected 500 Coins' LIMIT 1";
     $stmt = $conn->prepare($check_sql);
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     if ($stmt->get_result()->num_rows == 0) {
-        // Create gift box
-        $insert_sql = "INSERT INTO user_giftboxes (user_id, reward_coins) VALUES (?, 200)";
-        $stmt = $conn->prepare($insert_sql);
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
+        // Get achievement ID for 500 Coins
+        $ach_sql = "SELECT id FROM achievements WHERE name = 'Collected 500 Coins' LIMIT 1";
+        $ach_result = $conn->query($ach_sql);
+        if ($ach_result && $ach_result->num_rows > 0) {
+            $ach_id = $ach_result->fetch_assoc()['id'];
+            // Create gift box with achievement reference
+            $insert_sql = "INSERT INTO user_giftboxes (user_id, achievement_id, claimed) VALUES (?, ?, FALSE)";
+            $stmt = $conn->prepare($insert_sql);
+            $stmt->bind_param("ii", $user_id, $ach_id);
+            $stmt->execute();
+        }
     }
 }
 ?>
@@ -185,8 +201,9 @@ function createGiftBox($conn, $user_id) {
                 <div class="stat-card">
                     <div class="icon">🪙</div>
                     <div class="info">
-                        <h3 data-t="total_coins">Available Coins</h3>
-                        <p id="currentCoinsDisplay"><?php echo number_format($user_data['current_coins'] ?? 0); ?></p>
+                        <h3 data-t="total_coins">Total Coins Earned</h3>
+                        <p id="currentCoinsDisplay"><?php echo number_format($stats['total_coins_earned'] ?? 0); ?></p>
+                        <small>Available: <?php echo number_format($user_data['current_coins'] ?? 0); ?> 🪙</small>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -266,6 +283,28 @@ function createGiftBox($conn, $user_id) {
                             </div>
                         </div>
                         <?php endwhile; ?>
+                    </div>
+                </section>
+
+                <!-- Gift Boxes Section -->
+                <section class="card gifts-section">
+                    <h2>🎁 Unclaimed Gifts</h2>
+                    <div class="gifts-grid">
+                        <?php 
+                        $gift_count = 0;
+                        while($gift_row = $gifts->fetch_assoc()): 
+                            $gift_count++;
+                        ?>
+                        <div class="gift-item">
+                            <div class="gift-icon">🎁</div>
+                            <h4><?php echo htmlspecialchars($gift_row['achievement_name']); ?></h4>
+                            <p class="reward">📦 +200 🪙</p>
+                            <button class="claim-btn" onclick="claimGiftBox(<?php echo $gift_row['id']; ?>)">Claim</button>
+                        </div>
+                        <?php endwhile; ?>
+                        <?php if ($gift_count == 0): ?>
+                        <p style="text-align: center; color: #999; grid-column: 1/-1;">No unclaimed gifts yet. Unlock achievements to earn gifts!</p>
+                        <?php endif; ?>
                     </div>
                 </section>
 
@@ -384,6 +423,28 @@ function createGiftBox($conn, $user_id) {
                 document.getElementById('currentCoinsDisplay').innerText = data.new_coins.toLocaleString();
                 closeModal();
                 location.reload(); // Refresh to hide claimed gift box
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+
+    function claimGiftBox(giftId) {
+        const formData = new FormData();
+        formData.append('action', 'claim_gift');
+        formData.append('gift_id', giftId);
+
+        fetch('shop_actions.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('🎁 Gift claimed! You received +200 coins!');
+                document.getElementById('currentCoinsDisplay').innerText = data.new_coins.toLocaleString();
+                location.reload(); // Refresh to remove claimed gift
             } else {
                 alert("Error: " + data.message);
             }
