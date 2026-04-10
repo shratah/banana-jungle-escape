@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/register.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -38,6 +39,26 @@
 
         <button type="submit" name="register" id="registerBtn">Start Expedition</button>
     </form>
+
+    <!-- Google Sign-Up Button -->
+    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; align-items: center;">
+        <div id="g_id_onload"
+            data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+            data-context="signup"
+            data-ux_mode="popup"
+            data-callback="handleCredentialResponse"
+            data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+            data-type="standard"
+            data-shape="rectangular"
+            data-theme="outline"
+            data-text="signup_with"
+            data-size="large"
+            data-locale="en-US"
+            data-logo_alignment="left">
+        </div>
+    </div>
     
     <p class="login-link">Already an explorer? <a href="login.html">Login Here</a></p>
 </div>

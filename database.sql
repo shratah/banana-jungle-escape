@@ -47,15 +47,30 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
 );
 
--- Basic Achievements
+CREATE TABLE IF NOT EXISTS user_giftboxes (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    user_id INT(11) NOT NULL,
+    achievement_id INT(11) NOT NULL,
+    claimed BOOLEAN DEFAULT FALSE,
+    claimed_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
+);
+
+-- Achievements
 INSERT IGNORE INTO achievements (name, description, points) VALUES 
-('First Escape', 'Complete the main game for the first time', 50),
-('Coin Collector', 'Earn 2000 total coins', 200),
-('Banana Master', 'Collect 50 bananas', 150),
-('Speed Demon', 'Achieve 12 combos', 100),
-('Perfectionist', 'Perfect round for each level (no misses)', 500),
-('Scholar', '50 correct answers', 100),
-('Power Player', 'Use all power-ups once', 150),
-('Puzzle Master', 'Solve 100 puzzles correctly', 100),
-('Minigame Pro', 'Clear the memory board 5 times', 40);
+('Completed Level 1', 'Complete Level 1', 50),
+('Completed Level 2', 'Complete Level 2', 50),
+('Completed Level 3', 'Complete Level 3', 50),
+('Completed Level 4', 'Complete Level 4', 50),
+('Completed Level 5', 'Complete Level 5', 50),
+('Completed Level 6', 'Complete Level 6', 50),
+('Completed Level 7', 'Complete Level 7', 50),
+('Completed Level 8', 'Complete Level 8', 50),
+('Completed Level 9', 'Complete Level 9', 50),
+('Completed Level 10', 'Complete Level 10', 50),
+('Collected 500 Coins', 'Collect 500 total coins', 100),
+('Collected 1000 Coins', 'Collect 1000 total coins', 200),
+('Collected 10 Bananas', 'Collect 10 bananas', 50),
+('Collected 20 Bananas', 'Collect 20 bananas', 100);
 
