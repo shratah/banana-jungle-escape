@@ -22,26 +22,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("isiii", $user_id, $game_type, $score, $coins_earned, $time_spent);
 
     if ($stmt->execute()) {
-        $response = ['status' => 'success', 'achievements' => [], 'bonus_coins' => 0];
-
-        // 1. Perfectionist Bonus (Level finished without losing heart)
-        if ($game_type == 'main' && $level_completed > 0 && $perfect_level) {
-            $bonus = 300;
-            $response['bonus_coins'] = $bonus;
-            $conn->query("UPDATE users SET current_coins = current_coins + $bonus WHERE id = $user_id");
-            
-            // Award Perfectionist Achievement
-            awardAchievement($conn, $user_id, 'Perfectionist', $response);
+        // Update the user's current coin balance with coins earned in this session, including mini-games
+        if ($coins_earned > 0) {
+            $updateCoinsSql = "UPDATE users SET current_coins = current_coins + ? WHERE id = ?";
+            $updateCoinsStmt = $conn->prepare($updateCoinsSql);
+            $updateCoinsStmt->bind_param("ii", $coins_earned, $user_id);
+            $updateCoinsStmt->execute();
         }
 
-        // Award coin and banana achievements after saving session
-        $total_coins = $conn->query("SELECT SUM(coins_earned) as total FROM game_sessions WHERE user_id = $user_id")->fetch_assoc()['total'];
-        if ($total_coins >= 500) awardAchievement($conn, $user_id, '500 Coins', $response);
-        if ($total_coins >= 1000) awardAchievement($conn, $user_id, '1000 Coins', $response);
+        $response = ['status' => 'success', 'achievements' => [], 'bonus_coins' => 0];
 
-        $total_bananas = $conn->query("SELECT SUM(score) as total FROM game_sessions WHERE user_id = $user_id AND game_type = 'minigame'")->fetch_assoc()['total'];
-        if ($total_bananas >= 10) awardAchievement($conn, $user_id, '10 Bananas', $response);
-        if ($total_bananas >= 20) awardAchievement($conn, $user_id, '20 Bananas', $response);
+        // Level completion achievements
+        if ($game_type == 'main' && $level_completed > 0 && $level_completed <= 10) {
+            awardAchievement($conn, $user_id, 'Completed Level ' . $level_completed, $response);
+        }
+
+        // 2. Coin Collector (Total coins >= 2000)
+        $total_coins = $conn->query("SELECT SUM(coins_earned) as total FROM game_sessions WHERE user_id = $user_id")->fetch_assoc()['total'];
+        if ($total_coins >= 2000) awardAchievement($conn, $user_id, 'Coin Collector', $response);
+
+        // 3. Banana Master (50 total bananas)
+        $total_bananas = $conn->query("SELECT SUM(score) as total FROM game_sessions WHERE user_id = $user_id AND game_type = 'main'")->fetch_assoc()['total'];
+        if ($total_bananas >= 50) awardAchievement($conn, $user_id, 'Banana Master', $response);
+
+        // 4. Scholar (50 total correct answers/puzzles)
+        // For simplicity, we assume one session score = one banana = one correct answer
+        if ($total_bananas >= 50) awardAchievement($conn, $user_id, 'Scholar', $response);
+
+        // 5. First Escape
+        if ($game_type == 'main' && $score >= 10) awardAchievement($conn, $user_id, 'First Escape', $response);
 
         echo json_encode($response);
     } else {
@@ -50,17 +59,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 function awardAchievement($conn, $user_id, $name, &$response) {
-    $check_sql = "SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = (SELECT id FROM achievements WHERE name = ?)";
-    $stmt = $conn->prepare($check_sql);
-    $stmt->bind_param("is", $user_id, $name);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows == 0) {
-        $insert_sql = "INSERT INTO user_achievements (user_id, achievement_id) SELECT ?, id FROM achievements WHERE name = ?";
-        $stmt = $conn->prepare($insert_sql);
-        $stmt->bind_param("is", $user_id, $name);
-        $stmt->execute();
+    $check = $conn->query("SELECT id FROM user_achievements WHERE user_id = $user_id AND achievement_id = (SELECT id FROM achievements WHERE name = '$name')");
+    if ($check->num_rows == 0) {
+        $conn->query("INSERT INTO user_achievements (user_id, achievement_id) SELECT $user_id, id FROM achievements WHERE name = '$name'");
         $response['achievements'][] = $name;
     }
 }

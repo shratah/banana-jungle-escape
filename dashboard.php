@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
+// Check and award any missed achievements
+checkAndAwardAchievements($conn, $user_id);
+
 // Fetch User Preferences & Balance
 $user_sql = "SELECT current_coins, current_lives, current_level, theme, language FROM users WHERE id = ?";
 $stmt = $conn->prepare($user_sql);
@@ -45,23 +48,18 @@ $history = $stmt->get_result();
 checkAndAwardAchievements($conn, $user_id, $user_data);
 
 // Fetch Achievements
-$ach_sql = "SELECT a.name, a.description, ua.earned_at 
+$ach_sql = "SELECT a.name, a.description, ua.earned_at
             FROM achievements a
             LEFT JOIN user_achievements ua ON a.id = ua.achievement_id AND ua.user_id = ?
-            ORDER BY ua.earned_at DESC";
+            ORDER BY ua.earned_at DESC, a.id ASC
+            LIMIT 12";
 $stmt = $conn->prepare($ach_sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $achievements = $stmt->get_result();
 
-// Fetch Gift Boxes
-$gift_sql = "SELECT id, reward_coins FROM user_giftboxes WHERE user_id = ? AND claimed = 0";
-$stmt = $conn->prepare($gift_sql);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$gift_boxes = $stmt->get_result();
-
 // Fetch Top 10 Leaderboard
+
 $leaderboard_sql = "SELECT u.username, SUM(gs.score) as total_score 
                     FROM users u
                     JOIN game_sessions gs ON u.id = gs.user_id
@@ -271,22 +269,6 @@ function createGiftBox($conn, $user_id) {
                     </div>
                 </section>
 
-                <!-- Gift Boxes -->
-                <section class="card gift-section">
-                    <h2>🎁 Gift Boxes</h2>
-                    <div class="gift-grid">
-                        <?php while($gift = $gift_boxes->fetch_assoc()): ?>
-                        <div class="gift-item">
-                            <div class="gift-icon">🎁</div>
-                            <div class="gift-info">
-                                <h4>Reward: <?php echo $gift['reward_coins']; ?> 🪙</h4>
-                                <button class="claim-btn" onclick="claimGift(<?php echo $gift['id']; ?>)">Claim</button>
-                            </div>
-                        </div>
-                        <?php endwhile; ?>
-                    </div>
-                </section>
-
                 <!-- Shop Section -->
                 <section class="card shop-section">
                     <h2>🛒 Jungle Shop</h2>
@@ -355,9 +337,59 @@ function createGiftBox($conn, $user_id) {
         </main>
     </div>
 
+    <!-- Gift Box Modal -->
+    <div id="giftModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Congratulations!</h2>
+            <div class="gift-reward">
+                <div class="gift-icon-large">🎁</div>
+                <p>You received <strong>200 coins</strong>!</p>
+                <button class="claim-btn" onclick="claimGift()">Claim Reward</button>
+            </div>
+        </div>
+    </div>
+
     <script>
     const currentLang = "<?php echo $user_data['language']; ?>";
     applyLanguage(currentLang);
+
+    let currentGiftId = null;
+
+    function openGiftBox(giftId) {
+        currentGiftId = giftId;
+        document.getElementById('giftModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('giftModal').style.display = 'none';
+        currentGiftId = null;
+    }
+
+    function claimGift() {
+        if (!currentGiftId) return;
+
+        const formData = new FormData();
+        formData.append('action', 'claim_gift');
+        formData.append('gift_id', currentGiftId);
+
+        fetch('shop_actions.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Reward claimed! +200 coins');
+                document.getElementById('currentCoinsDisplay').innerText = data.new_coins.toLocaleString();
+                closeModal();
+                location.reload(); // Refresh to hide claimed gift box
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => console.error("Error:", err));
+    }
 
     function updateSetting(type, value) {
         const formData = new FormData();
@@ -428,3 +460,35 @@ function createGiftBox($conn, $user_id) {
     </script>
 </body>
 </html>
+<?php
+function checkAndAwardAchievements($conn, $user_id) {
+    // Get user stats
+    $user_stats = $conn->query("SELECT current_coins FROM users WHERE id = $user_id")->fetch_assoc();
+    $user_coins = $user_stats['current_coins'];
+    
+    $total_bananas = $conn->query("SELECT SUM(score) as total FROM game_sessions WHERE user_id = $user_id AND game_type = 'main'")->fetch_assoc()['total'] ?? 0;
+    
+    // Check coin achievements
+    if ($user_coins >= 500) awardAchievement($conn, $user_id, 'Collected 500 Coins');
+    if ($user_coins >= 1000) awardAchievement($conn, $user_id, 'Collected 1000 Coins');
+    
+    // Check banana achievements
+    if ($total_bananas >= 10) awardAchievement($conn, $user_id, 'Collected 10 Bananas');
+    if ($total_bananas >= 20) awardAchievement($conn, $user_id, 'Collected 20 Bananas');
+}
+
+function awardAchievement($conn, $user_id, $name) {
+    // Get achievement ID safely
+    $achievement_result = $conn->query("SELECT id FROM achievements WHERE name = '$name' LIMIT 1");
+    if ($achievement_result && $achievement_result->num_rows > 0) {
+        $achievement_id = $achievement_result->fetch_assoc()['id'];
+        
+        // Check if already awarded
+        $check = $conn->query("SELECT id FROM user_achievements WHERE user_id = $user_id AND achievement_id = $achievement_id");
+        if ($check->num_rows == 0) {
+            $conn->query("INSERT INTO user_achievements (user_id, achievement_id) VALUES ($user_id, $achievement_id)");
+            $conn->query("INSERT INTO user_giftboxes (user_id, achievement_id) VALUES ($user_id, $achievement_id)");
+        }
+    }
+}
+?>
