@@ -8,8 +8,8 @@ let timerSeconds = 60;
 let timerInterval = null;
 let currentLevel = 1;
 
-// Memory Game Variables
-const cardValues = ['🍌', '🍌', '🍌🍌', '🍌🍌', '🍌🍌🍌', '🍌🍌🍌', '🍌🍌🍌🍌', '🍌🍌🍌🍌'];
+// Memory Game Variables - Matching pairs: 1, 2, 3, 4 (each appears twice)
+const cardValues = [1, 1, 2, 2, 3, 3, 4, 4];
 let cards = [];
 let hasFlippedCard = false;
 let lockBoard = false;
@@ -18,6 +18,12 @@ let matchCount = 0;
 
 // Initialize Game
 async function initGame() {
+    // Check if user is coming from main game to restore heart
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('restore') === 'true') {
+        document.getElementById('resumeBtn').style.display = 'inline-block';
+    }
+    
     // Load state from server
     try {
         const statsResponse = await fetch('sync_stats.php');
@@ -86,6 +92,25 @@ function buyLife() {
     }
 }
 
+// Restore Heart and Resume Lost Level
+function restoreHeartAndResume() {
+    // Add a heart back to the player
+    lives++;
+    updateUI();
+    
+    // Sync the restored heart to the server
+    const formData = new FormData();
+    formData.append('lives', lives);
+    fetch('sync_stats.php', { method: 'POST', body: formData });
+    
+    showToast("💪 Heart Restored! Resuming main game...", "success");
+    
+    // Redirect back to main game with resume parameter
+    setTimeout(() => {
+        window.location.href = 'index.html?resume=true';
+    }, 1500);
+}
+
 // Shuffle array (Fisher-Yates)
 function shuffle(array) {
     let currentIndex = array.length, randomIndex;
@@ -105,13 +130,13 @@ function setupBoard() {
 
     cards = shuffle([...cardValues]);
 
-    cards.forEach((bananaVal, index) => {
+    cards.forEach((bananaCount, index) => {
         const cardElement = document.createElement('div');
         cardElement.classList.add('memory-card');
-        cardElement.dataset.val = bananaVal;
+        cardElement.dataset.val = bananaCount;
         cardElement.dataset.index = index;
 
-        const bananaCount = bananaVal.length;
+        // Generate banana grid based on count
         let bananaGridHTML = '<div class="banana-grid">';
         for (let i = 0; i < bananaCount; i++) {
             bananaGridHTML += '<div class="banana-item">🍌</div>';

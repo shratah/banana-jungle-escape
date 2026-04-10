@@ -42,16 +42,42 @@ async function preFetchNextPuzzle() {
     isPreFetching = true;
     try {
         const response = await fetch('proxy.php');
-        const data = await response.json();
-        if (data.question && data.solution !== undefined) {
-            // Preload the base64 image immediately
-            const img = new Image();
-            img.onload = () => {
-                nextPuzzleData = data;
-                isPreFetching = false;
-            };
-            img.src = data.question; // Data is already base64 data URL
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        
+        // Check for API errors
+        if (data.error) {
+            console.error("API Error:", data.error);
+            isPreFetching = false;
+            return;
+        }
+        
+        // Validate data structure
+        if (!data.question || data.solution === undefined) {
+            console.error("Invalid puzzle data structure:", data);
+            isPreFetching = false;
+            return;
+        }
+        
+        // Preload the base64 image
+        const img = new Image();
+        
+        img.onerror = function() {
+            console.error("Prefetch: Image failed to load from src:", data.question.substring(0, 100));
+            isPreFetching = false;
+            // Don't cache failed data
+            nextPuzzleData = null;
+        };
+        
+        img.onload = () => {
+            console.log("Prefetch: Image loaded successfully");
+            nextPuzzleData = data;
+            isPreFetching = false;
+        };
+        
+        img.src = data.question; // Should be data URL
     } catch (e) {
         console.error("Prefetch error:", e);
         isPreFetching = false;
@@ -89,39 +115,89 @@ async function loadPuzzle() {
     if (!data) {
         try {
             const response = await fetch('proxy.php');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             data = await response.json();
+            if (data.error) {
+                throw new Error(`API Error: ${data.error}`);
+            }
         } catch (error) {
             console.error("Error fetching puzzle:", error);
-            showToast("Failed to load puzzle. Retrying...", "error");
+            showToast("Failed to load puzzle: " + error.message + ". Retrying...", "error");
             isLoading = false;
             setTimeout(loadPuzzle, 2000);
             return;
         }
     }
 
-    // Display the puzzle
+    // Validate data
+    if (!data.question || data.solution === undefined) {
+        console.error("Invalid puzzle data:", data);
+        showToast("Puzzle data is invalid. Retrying...", "error");
+        isLoading = false;
+        setTimeout(loadPuzzle, 2000);
+        return;
+    }
+
+    // Display the puzzle with proper error and load handlers
     correctAnswer = data.solution;
+    
+    imgElement.onerror = function() {
+        console.error("Failed to load image from:", data.question.substring(0, 100));
+        showToast("Image failed to load. Retrying...", "error");
+        isLoading = false;
+        loader.style.display = 'none';
+        setTimeout(loadPuzzle, 2000);
+    };
+    
+    imgElement.onload = function() {
+        console.log("Image loaded successfully");
+        loader.style.display = 'none';
+        inputField.disabled = false;
+        inputField.focus();
+        startTimer();
+        preFetchNextPuzzle();
+    };
+    
     imgElement.src = data.question;
     imgElement.style.display = 'block';
-    loader.style.display = 'none';
-    inputField.disabled = false;
-    inputField.focus();
-    isLoading = false;
-    startTimer();
-
-    // Start fetching the NEXT one immediately in identifying background
-    preFetchNextPuzzle();
+    
+    // Timeout fallback - if image doesn't load in 10 seconds, retry
+    setTimeout(() => {
+        if (imgElement.style.display === 'block' && loader.style.display !== 'none') {
+            console.warn("Image load timeout");
+            showToast("Image loading timeout. Retrying...", "error");
+            isLoading = false;
+            setTimeout(loadPuzzle, 2000);
+        }
+    }, 10000);
 }
 
 // Initial stats load (one time only)
 async function initialStatsLoad() {
+    // Check if resuming from minigame after restoring heart
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('resume') === 'true') {
+        const lostLevel = sessionStorage.getItem('lostLevel');
+        if (lostLevel) {
+            currentLevel = parseInt(lostLevel);
+            puzzlesInLevel = 0;
+            sessionStorage.removeItem('lostLevel');
+            sessionStorage.removeItem('lostLevelPuzzles');
+            showToast(`💪 Heart Restored! Resuming Level ${currentLevel}...`, 'success');
+        }
+    }
+    
     try {
         const statsResponse = await fetch('sync_stats.php');
         const statsData = await statsResponse.json();
         if (statsData.status === 'success') {
             coins = statsData.coins;
             lives = statsData.lives;
-            currentLevel = statsData.level;
+            if (!urlParams.get('resume')) {
+                currentLevel = statsData.level; // Only update current level if not resuming
+            }
             powerups = {
                 magnet: statsData.magnet || 0,
                 freeze: statsData.freeze || 0,
@@ -158,12 +234,20 @@ function checkAnswer() {
         puzzlesInLevel++;
         showToast("Correct! 🧩 Progress: " + puzzlesInLevel + "/3", "success");
         stopTimer();
+        inputField.disabled = true; // Disable input after correct answer
         
-        // Check if level is completed (after bonus game)
+        // Update Stats UI
+        document.getElementById("bananaCount").innerText = bananas;
+        syncStats();
+        
+        // Check if level is completed
         if (puzzlesInLevel >= 3) {
             handleLevelCompletion();
         } else {
-            startFallingGame(); // Start the bonus game!
+            // Bonus game after correct answer
+            setTimeout(() => {
+                startFallingGame();
+            }, 800);
         }
     } else {
         lives--;
@@ -174,30 +258,33 @@ function checkAnswer() {
         const gameBox = document.getElementById('gameBox');
         gameBox.classList.add('shake');
         setTimeout(() => gameBox.classList.remove('shake'), 500);
-    }
-
-    // Update Stats UI & Sync with Server
-    document.getElementById("bananaCount").innerText = bananas;
-    document.getElementById("lives").innerText = lives;
-    syncStats();
-
-    answerInput.value = "";
-
-    // Win/Loss Condition Check
-    if (checkGameOver()) return;
-
-    if (currentLevel > 10) {
-        saveSession('main', bananas, 0);
+        
+        // Update Lives display
+        document.getElementById("lives").innerText = lives;
+        syncStats();
+        
+        answerInput.value = "";
+        
+        // Check if game over (all lives lost)
+        if (lives <= 0) {
+            saveSession('main', bananas, 0);
+            // Store lost level for resuming
+            sessionStorage.setItem('lostLevel', currentLevel);
+            sessionStorage.setItem('lostLevelPuzzles', puzzlesInLevel);
+            setTimeout(() => {
+                alert("Game Over 💀 You lost all your lives!\\n\\nPlay Mini-Game to earn coins and restore a heart!");
+                location.href = 'minigame.html?restore=true';
+            }, 1000);
+            return;
+        }
+        
+        // If still have lives, reload puzzle to try again
         setTimeout(() => {
-            alert("CONGRATULATIONS! 🏆 You've cleared all 10 levels of the Jungle!");
-            location.href = 'dashboard.php';
-        }, 500);
-        return;
-    }
-
-    // Load next puzzle if game continues and not waiting for level animation
-    if (puzzlesInLevel < 3) {
-        loadPuzzle();
+            inputField.value = "";
+            inputField.disabled = false;
+            inputField.focus();
+            loadPuzzle();
+        }, 2000);
     }
 }
 
@@ -218,12 +305,24 @@ function handleLevelCompletion() {
     currentLevel++;
     puzzlesInLevel = 0;
     heartsLostInLevel = false;
+    
+    // Check if all levels completed
+    if (currentLevel > 10) {
+        saveSession('main', bananas, coins);
+        setTimeout(() => {
+            alert("🏆 CONGRATULATIONS! 🏆\n\nYou've cleared all 10 levels of the Jungle!\n\n🪙 Total Coins: " + coins);
+            location.href = 'dashboard.php';
+        }, 2000);
+        return;
+    }
 
     // Small delay before starting next level
     setTimeout(() => {
-        if (!checkGameOver() && currentLevel <= 10) {
-            loadPuzzle();
-        }
+        document.getElementById("currentLevel").innerText = currentLevel;
+        document.getElementById("lives").innerText = lives;
+        document.getElementById("puzzleProgress").innerText = "1";
+        loadPuzzle();
+    }, 2000);
     }, 2000);
 }
 
@@ -484,4 +583,4 @@ function catchObject(obj) {
 window.onload = async () => {
     await initialStatsLoad();
     loadPuzzle();
-};
+};

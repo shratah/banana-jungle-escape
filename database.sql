@@ -72,5 +72,7 @@ INSERT IGNORE INTO achievements (name, description, points) VALUES
 ('Collected 500 Coins', 'Collect 500 total coins', 100),
 ('Collected 1000 Coins', 'Collect 1000 total coins', 200),
 ('Collected 10 Bananas', 'Collect 10 bananas', 50),
-('Collected 20 Bananas', 'Collect 20 bananas', 100);
+('Collected 20 Bananas', 'Collect 20 bananas', 100),
+('Banana Master', 'Collect 35 bananas', 150),
+('Banana King', 'Collect 50 bananas', 250);
 
