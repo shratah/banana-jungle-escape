@@ -11,11 +11,14 @@ $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
 // Fetch User Preferences & Balance
-$user_sql = "SELECT current_coins, current_lives, theme, language FROM users WHERE id = ?";
+$user_sql = "SELECT current_coins, current_lives, current_level, theme, language FROM users WHERE id = ?";
 $stmt = $conn->prepare($user_sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user_data = $stmt->get_result()->fetch_assoc();
+if (!isset($user_data['current_level'])) {
+    $user_data['current_level'] = 0;
+}
 
 // Fetch User Stats
 $stats_sql = "SELECT 
@@ -38,6 +41,9 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $history = $stmt->get_result();
 
+// Check and award achievements based on current stats
+checkAndAwardAchievements($conn, $user_id, $user_data);
+
 // Fetch Achievements
 $ach_sql = "SELECT a.name, a.description, ua.earned_at 
             FROM achievements a
@@ -48,6 +54,13 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $achievements = $stmt->get_result();
 
+// Fetch Gift Boxes
+$gift_sql = "SELECT id, reward_coins FROM user_giftboxes WHERE user_id = ? AND claimed = 0";
+$stmt = $conn->prepare($gift_sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$gift_boxes = $stmt->get_result();
+
 // Fetch Top 10 Leaderboard
 $leaderboard_sql = "SELECT u.username, SUM(gs.score) as total_score 
                     FROM users u
@@ -55,6 +68,78 @@ $leaderboard_sql = "SELECT u.username, SUM(gs.score) as total_score
                     GROUP BY u.id
                     ORDER BY total_score DESC LIMIT 10";
 $leaderboard_result = $conn->query($leaderboard_sql);
+
+// Function to check and award achievements
+function checkAndAwardAchievements($conn, $user_id, $user_data) {
+    $current_coins = $user_data['current_coins'];
+    $current_level = $user_data['current_level'];
+
+    // Get total earned coins from all game sessions
+    $coins_sql = "SELECT SUM(coins_earned) as total_coins_earned FROM game_sessions WHERE user_id = ?";
+    $stmt = $conn->prepare($coins_sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $coins_result = $stmt->get_result()->fetch_assoc();
+    $total_coins_earned = $coins_result['total_coins_earned'] ?? 0;
+
+    // Get total bananas from game_sessions
+    $bananas_sql = "SELECT SUM(score) as total_bananas FROM game_sessions WHERE user_id = ? AND game_type = 'minigame'";
+    $stmt = $conn->prepare($bananas_sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $bananas_result = $stmt->get_result()->fetch_assoc();
+    $total_bananas = $bananas_result['total_bananas'] ?? 0;
+
+    // Award level achievements
+    for ($level = 1; $level <= 10; $level++) {
+        if ($current_level !== null && $current_level >= $level) {
+            awardAchievement($conn, $user_id, "Level $level");
+        }
+    }
+
+    // Award coin achievements based on total coins earned
+    if ($total_coins_earned >= 500) awardAchievement($conn, $user_id, "500 Coins");
+    if ($total_coins_earned >= 1000) awardAchievement($conn, $user_id, "1000 Coins");
+
+    // Award banana achievements
+    if ($total_bananas >= 10) awardAchievement($conn, $user_id, "10 Bananas");
+    if ($total_bananas >= 20) awardAchievement($conn, $user_id, "20 Bananas");
+
+    // Create gift box if coin achievement unlocked
+    if ($total_coins_earned >= 500) {
+        createGiftBox($conn, $user_id);
+    }
+}
+
+function awardAchievement($conn, $user_id, $name) {
+    // Check if already earned
+    $check_sql = "SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = (SELECT id FROM achievements WHERE name = ?)";
+    $stmt = $conn->prepare($check_sql);
+    $stmt->bind_param("is", $user_id, $name);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows == 0) {
+        // Insert achievement
+        $insert_sql = "INSERT INTO user_achievements (user_id, achievement_id) SELECT ?, id FROM achievements WHERE name = ?";
+        $stmt = $conn->prepare($insert_sql);
+        $stmt->bind_param("is", $user_id, $name);
+        $stmt->execute();
+    }
+}
+
+function createGiftBox($conn, $user_id) {
+    // Check if already has gift box
+    $check_sql = "SELECT id FROM user_giftboxes WHERE user_id = ? AND claimed = 0";
+    $stmt = $conn->prepare($check_sql);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows == 0) {
+        // Create gift box
+        $insert_sql = "INSERT INTO user_giftboxes (user_id, reward_coins) VALUES (?, 200)";
+        $stmt = $conn->prepare($insert_sql);
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -186,6 +271,22 @@ $leaderboard_result = $conn->query($leaderboard_sql);
                     </div>
                 </section>
 
+                <!-- Gift Boxes -->
+                <section class="card gift-section">
+                    <h2>🎁 Gift Boxes</h2>
+                    <div class="gift-grid">
+                        <?php while($gift = $gift_boxes->fetch_assoc()): ?>
+                        <div class="gift-item">
+                            <div class="gift-icon">🎁</div>
+                            <div class="gift-info">
+                                <h4>Reward: <?php echo $gift['reward_coins']; ?> 🪙</h4>
+                                <button class="claim-btn" onclick="claimGift(<?php echo $gift['id']; ?>)">Claim</button>
+                            </div>
+                        </div>
+                        <?php endwhile; ?>
+                    </div>
+                </section>
+
                 <!-- Shop Section -->
                 <section class="card shop-section">
                     <h2>🛒 Jungle Shop</h2>
@@ -296,6 +397,28 @@ $leaderboard_result = $conn->query($leaderboard_sql);
                 alert(`Successfully purchased ${name}!`);
                 document.getElementById('currentCoinsDisplay').innerText = data.new_coins.toLocaleString();
                 if (category === 'achievement') location.reload(); // Refresh to show unlocked achievement
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+
+    function claimGift(giftId) {
+        const formData = new FormData();
+        formData.append('action', 'claim_gift');
+        formData.append('gift_id', giftId);
+
+        fetch('shop_actions.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(`Claimed ${data.reward_coins} coins!`);
+                document.getElementById('currentCoinsDisplay').innerText = data.new_coins.toLocaleString();
+                location.reload(); // Refresh to remove claimed gift
             } else {
                 alert("Error: " + data.message);
             }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 include 'db.php';
 
 echo "<h2>Database Connectivity & Schema Check</h2>";
@@ -8,7 +8,7 @@ if ($conn->connect_error) {
 }
 echo "<p style='color:green'>Database connected successfully!</p>";
 
-$tables = ['users', 'game_sessions', 'achievements', 'user_achievements'];
+$tables = ['users', 'game_sessions', 'achievements', 'user_achievements', 'user_giftboxes'];
 
 foreach ($tables as $table) {
     echo "<h3>Table: $table</h3>";

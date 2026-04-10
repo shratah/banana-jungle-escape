@@ -51,5 +51,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo json_encode(['status' => 'error', 'message' => 'Not enough coins']);
         }
     }
+    elseif ($action == 'claim_gift') {
+        $gift_id = intval($_POST['gift_id']);
+
+        // Check if gift exists and not claimed
+        $gift = $conn->query("SELECT reward_coins FROM user_giftboxes WHERE id = $gift_id AND user_id = $user_id AND claimed = 0");
+        if ($gift->num_rows > 0) {
+            $reward = $gift->fetch_assoc()['reward_coins'];
+            $conn->query("UPDATE users SET current_coins = current_coins + $reward WHERE id = $user_id");
+            $conn->query("UPDATE user_giftboxes SET claimed = 1 WHERE id = $gift_id");
+            $new_coins = $conn->query("SELECT current_coins FROM users WHERE id = $user_id")->fetch_assoc()['current_coins'];
+            echo json_encode(['status' => 'success', 'reward_coins' => $reward, 'new_coins' => $new_coins]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Gift not found or already claimed']);
+        }
+    }
 }
 ?>

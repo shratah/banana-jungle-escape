@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 include 'db.php';
 
 echo "<h2>Running Database Migrations...</h2>";
@@ -12,6 +12,17 @@ $queries = [
     "ALTER TABLE users ADD COLUMN powerup_freeze INT(11) DEFAULT 0",
     "ALTER TABLE users ADD COLUMN powerup_rainbow INT(11) DEFAULT 0",
     "ALTER TABLE users ADD COLUMN powerup_lucky INT(11) DEFAULT 0",
+    "CREATE TABLE IF NOT EXISTS user_giftboxes (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        user_id INT(11) NOT NULL,
+        achievement_id INT(11) DEFAULT NULL,
+        claimed TINYINT(1) DEFAULT 0,
+        reward_coins INT(11) NOT NULL DEFAULT 200,
+        claimed_at TIMESTAMP NULL DEFAULT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )",
+    "ALTER TABLE user_giftboxes ADD COLUMN IF NOT EXISTS reward_coins INT(11) NOT NULL DEFAULT 200 AFTER claimed",
+    "ALTER TABLE user_giftboxes MODIFY achievement_id INT(11) DEFAULT NULL",
     "INSERT IGNORE INTO achievements (name, description, points) VALUES 
         ('First Escape', 'Complete the main game for the first time', 50),
         ('Coin Collector', 'Earn 2000 total coins', 200),
