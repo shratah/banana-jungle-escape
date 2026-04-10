@@ -104,3 +104,28 @@ function createLeaf(container) {
     
     container.appendChild(leaf);
 }
+
+// Google Sign-In callback
+function handleCredentialResponse(response) {
+    const credential = response.credential;
+    
+    fetch('google_auth.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'credential=' + encodeURIComponent(credential)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = 'index.html';
+        } else {
+            alert('Google authentication failed: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred during Google authentication.');
+    });
+}

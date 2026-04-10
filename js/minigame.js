@@ -111,10 +111,17 @@ function setupBoard() {
         cardElement.dataset.val = bananaVal;
         cardElement.dataset.index = index;
 
+        const bananaCount = bananaVal.length;
+        let bananaGridHTML = '<div class="banana-grid">';
+        for (let i = 0; i < bananaCount; i++) {
+            bananaGridHTML += '<div class="banana-item">🍌</div>';
+        }
+        bananaGridHTML += '</div>';
+
         cardElement.innerHTML = `
             <div class="memory-card-inner">
                 <div class="memory-card-front">?</div>
-                <div class="memory-card-back">${bananaVal}</div>
+                <div class="memory-card-back">${bananaGridHTML}</div>
             </div>
         `;
 
