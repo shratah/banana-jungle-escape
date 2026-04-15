@@ -154,6 +154,7 @@ async function loadPuzzle() {
             loader.style.display = 'none';
             inputField.disabled = false;
             inputField.focus();
+            isLoading = false;
             startTimer();
             preFetchNextPuzzle();
         };
@@ -165,6 +166,7 @@ async function loadPuzzle() {
         loader.style.display = 'none';
         inputField.disabled = false;
         inputField.focus();
+        isLoading = false;
         startTimer();
         preFetchNextPuzzle();
     };
@@ -243,7 +245,7 @@ function checkAnswer() {
         puzzlesInLevel++;
         showToast("Correct! 🧩 Progress: " + puzzlesInLevel + "/3", "success");
         stopTimer();
-        inputField.disabled = true; // Disable input after correct answer
+        answerInput.disabled = true; // Disable input after correct answer
         
         // Update Stats UI
         document.getElementById("bananaCount").innerText = bananas;
@@ -289,9 +291,9 @@ function checkAnswer() {
         
         // If still have lives, reload puzzle to try again
         setTimeout(() => {
-            inputField.value = "";
-            inputField.disabled = false;
-            inputField.focus();
+            answerInput.value = "";
+            answerInput.disabled = false;
+            answerInput.focus();
             loadPuzzle();
         }, 2000);
     }
@@ -331,7 +333,6 @@ function handleLevelCompletion() {
         document.getElementById("lives").innerText = lives;
         document.getElementById("puzzleProgress").innerText = "1";
         loadPuzzle();
-    }, 2000);
     }, 2000);
 }
 
@@ -497,7 +498,11 @@ function startFallingGame() {
         if (fallbackCount >= objectsCount) {
             clearInterval(spawnInterval);
             setTimeout(() => {
-                if (!checkGameOver()) loadPuzzle();
+                if (lives > 0) {
+                    loadPuzzle();
+                } else {
+                    checkGameOver();
+                }
             }, 5000);
         }
     }, 400);
