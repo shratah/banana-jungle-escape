@@ -207,6 +207,14 @@ function createGiftBox($conn, $user_id) {
                     </div>
                 </div>
                 <div class="stat-card">
+                    <div class="icon">🚀</div>
+                    <div class="info">
+                        <h3>Current Level</h3>
+                        <p><?php echo htmlspecialchars($user_data['current_level'] ?? 0); ?></p>
+                        <small>Keep climbing!</small>
+                    </div>
+                </div>
+                <div class="stat-card">
                     <div class="icon">🎮</div>
                     <div class="info">
                         <h3>Games Played</h3>

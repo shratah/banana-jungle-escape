@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let msg = "Registration failed.";
         if (error === 'exists') msg = "Username or Email already exists.";
         else if (error === 'db') msg = "Database connection error.";
+        else if (error === 'password_mismatch') msg = "Passwords do not match.";
         
         const errorMsg = document.createElement("p");
         errorMsg.style.color = "#ff6b6b";
@@ -50,6 +51,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (password.length < 6) {
             hasError = true;
             showError(passwordInput, "Password must be at least 6 characters.");
+        }
+
+        const passwordConfirmInput = document.getElementById("password_confirm");
+        const passwordConfirm = passwordConfirmInput.value;
+        if (password !== passwordConfirm) {
+            hasError = true;
+            showError(passwordConfirmInput, "Passwords do not match.");
         }
 
         if (hasError) {
@@ -119,7 +127,7 @@ function handleCredentialResponse(response) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            window.location.href = 'index.html';
+            window.location.href = 'dashboard.php';
         } else {
             alert('Google authentication failed: ' + (data.message || 'Unknown error'));
         }

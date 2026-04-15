@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
 
-                header("Location: index.html");
+                header("Location: dashboard.php");
                 exit();
             } else {
                 header("Location: login.html?error=incorrect");
