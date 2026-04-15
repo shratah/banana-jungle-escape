@@ -18,6 +18,10 @@ let matchCount = 0;
 
 // Initialize Game
 async function initGame() {
+    // Show loading indicator
+    document.getElementById('loadingIndicator').style.display = 'flex';
+    document.getElementById('memoryGrid').style.display = 'none';
+
     // Check if user is coming from main game to restore heart
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('restore') === 'true') {
@@ -42,6 +46,10 @@ async function initGame() {
     updateUI();
     setupBoard();
     startTimer();
+
+    // Hide loading indicator and show grid
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('memoryGrid').style.display = 'grid';
 }
 
 // Custom Toast Notification System

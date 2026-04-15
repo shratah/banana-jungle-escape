@@ -37,8 +37,8 @@
 
         <div class="input-group">
             <input type="number" id="answer" data-t-placeholder="submit" onkeypress="handleKeyPress(event)">
-            <button onclick="checkAnswer()" data-t="submit">Submit</button>
-            <button onclick="togglePause()" class="pause-btn" data-t="pause">⏸️ Pause</button>
+            <button id="submitBtn" data-t="submit">Submit</button>
+            <button id="pauseBtn" class="pause-btn" data-t="pause">⏸️ Pause</button>
         </div>
     </div>
 
@@ -46,7 +46,7 @@
     <div id="pauseOverlay" class="overlay">
         <div class="overlay-content">
             <h2 data-t="game_paused">Game Paused</h2>
-            <button onclick="togglePause()" data-t="resume">Resume</button>
+            <button id="resumeBtn" data-t="resume">Resume</button>
             <a href="dashboard.php" class="btn-link" data-t="dashboard">Dashboard</a>
         </div>
     </div>

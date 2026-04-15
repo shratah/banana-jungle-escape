@@ -37,8 +37,14 @@
         <p class="instruction-text" style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-dim);" data-t="match_instruction">Find
             matching pairs to earn coins!</p>
 
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="loading-indicator" style="display: flex; justify-content: center; align-items: center; height: 200px;">
+            <div class="spinner"></div>
+            <p style="margin-left: 10px; color: var(--text-dim);">Loading Jungle Puzzle...</p>
+        </div>
+
         <!-- Memory Grid -->
-        <div class="memory-grid" id="memoryGrid">
+        <div class="memory-grid" id="memoryGrid" style="display: none;">
             <!-- Cards injected by JS -->
         </div>
     </div>

@@ -142,13 +142,22 @@ async function loadPuzzle() {
 
     // Display the puzzle with proper error and load handlers
     correctAnswer = data.solution;
+    console.log("Loading puzzle with solution:", correctAnswer);
+    console.log("Image data preview:", data.question.substring(0, 50) + "...");
     
     imgElement.onerror = function() {
         console.error("Failed to load image from:", data.question.substring(0, 100));
-        showToast("Image failed to load. Retrying...", "error");
-        isLoading = false;
-        loader.style.display = 'none';
-        setTimeout(loadPuzzle, 2000);
+        // Fallback: show a placeholder image
+        imgElement.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><text x="50%" y="50%" font-size="20" text-anchor="middle" dy=".3em">Puzzle Loading...</text></svg>');
+        imgElement.onload = function() {
+            console.log("Fallback image loaded");
+            loader.style.display = 'none';
+            inputField.disabled = false;
+            inputField.focus();
+            startTimer();
+            preFetchNextPuzzle();
+        };
+        showToast("Using fallback image. API may be slow.", "error");
     };
     
     imgElement.onload = function() {
@@ -401,9 +410,16 @@ function updateTimerUI() {
 
 // Pause Game
 function togglePause() {
+    console.log("Toggle pause called, current isPaused:", isPaused);
     isPaused = !isPaused;
+    console.log("New isPaused:", isPaused);
     const pauseOverlay = document.getElementById('pauseOverlay');
-    if (pauseOverlay) pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+    if (pauseOverlay) {
+        pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+        console.log("Overlay display set to:", pauseOverlay.style.display);
+    } else {
+        console.error("Pause overlay not found");
+    }
     
     // Disable/Enable input based on pause state
     const inputField = document.getElementById("answer");
@@ -583,4 +599,9 @@ function catchObject(obj) {
 window.onload = async () => {
     await initialStatsLoad();
     loadPuzzle();
+    
+    // Add event listeners for buttons
+    document.getElementById('submitBtn').addEventListener('click', checkAnswer);
+    document.getElementById('pauseBtn').addEventListener('click', togglePause);
+    document.getElementById('resumeBtn').addEventListener('click', togglePause);
 };
